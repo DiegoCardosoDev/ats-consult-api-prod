@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.shared.infrastructure.adapter.in.web.exception;
 
+import com.br.ats.consult.api.applicationform.domain.exception.ApplicationFormNotFoundException;
 import com.br.ats.consult.api.candidate.domain.exception.CandidateEmailAlreadyExistsException;
 import com.br.ats.consult.api.candidate.domain.exception.CandidateNotFoundException;
 import com.br.ats.consult.api.client.domain.exception.ClientAlreadyExistsException;
@@ -45,7 +46,8 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler({JobPositionNotFoundException.class, TechnologyNotFoundException.class,
             ClientNotFoundException.class, CandidateNotFoundException.class,
-            SelectionProcessNotFoundException.class, CandidateApplicationNotFoundException.class})
+            SelectionProcessNotFoundException.class, CandidateApplicationNotFoundException.class,
+            ApplicationFormNotFoundException.class})
     public ResponseEntity<ApiError> handleNotFound(RuntimeException ex, HttpServletRequest request) {
         return response(HttpStatus.NOT_FOUND, request,
                 ex.getMessage() != null ? ex.getMessage() : "Recurso não encontrado");

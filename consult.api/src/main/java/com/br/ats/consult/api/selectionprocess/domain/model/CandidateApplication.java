@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.selectionprocess.domain.model;
 
+import com.br.ats.consult.api.applicationform.domain.model.FormAnswer;
 import com.br.ats.consult.api.candidate.domain.model.Candidate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,6 +9,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -20,6 +23,8 @@ public class CandidateApplication {
     private Long selectionProcessId;
     private Candidate candidate;
     private ResumeMetadata resume;
+    @Builder.Default
+    private List<FormAnswer> answers = new ArrayList<>();
     private Instant appliedAt;
 
     public void validate() {

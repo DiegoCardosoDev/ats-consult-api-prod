@@ -21,6 +21,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -109,6 +110,83 @@ class CandidateSelectionProcessIntegrationTest {
                         .with(user("recruiter").roles("TECH_RECRUITER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[*].email", hasItem("carla@example.com")));
+    }
+
+    @Test
+    void jobApplicationFormIsAssociatedWithJobAndAnswersAreStored() throws Exception {
+        long clientId = createClient("11222333000661", "CLI-006");
+        long jobId = createJob("Vaga com Formulário");
+        long otherJobId = createJob("Vaga Sem Formulário");
+
+        mockMvc.perform(get("/api/v1/job-positions/{jobId}/application-form", jobId)
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isNoContent());
+
+        MvcResult formCreated = mockMvc.perform(put("/api/v1/job-positions/{jobId}/application-form", jobId)
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title":"Perguntas da vaga",
+                                  "description":"Responda antes de enviar a candidatura.",
+                                  "active":true,
+                                  "questions":[
+                                    {"prompt":"Tem experiência com Java?","type":"YES_NO","required":true,"options":[],"position":0},
+                                    {"prompt":"Qual o seu nível?","type":"SINGLE_CHOICE","required":false,"options":["Júnior","Pleno","Sênior"],"position":1}
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.jobPositionId").value(jobId))
+                .andExpect(jsonPath("$.questions.length()").value(2))
+                .andReturn();
+
+        Number firstQuestionId = JsonPath.read(formCreated.getResponse().getContentAsString(),
+                "$.questions[0].id");
+        Number secondQuestionId = JsonPath.read(formCreated.getResponse().getContentAsString(),
+                "$.questions[1].id");
+
+        mockMvc.perform(get("/api/v1/job-positions/{jobId}/application-form", otherJobId)
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
+                        .file(jsonCandidate("Diego Formulário", "diego.formulario@example.com"))
+                        .file(pdfFile())
+                        .param("clientId", Long.toString(clientId))
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        String answers = """
+                {"answers":[
+                  {"questionId":%d,"answer":"Sim"},
+                  {"questionId":%d,"answer":"Sênior"}
+                ]}
+                """.formatted(firstQuestionId.longValue(), secondQuestionId.longValue());
+
+        MvcResult applied = mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
+                        .file(jsonCandidate("Diego Formulário", "diego.formulario@example.com"))
+                        .file(pdfFile())
+                        .file(new MockMultipartFile("answers", "", MediaType.APPLICATION_JSON_VALUE,
+                                answers.getBytes(StandardCharsets.UTF_8)))
+                        .param("clientId", Long.toString(clientId))
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf()))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Number processId = JsonPath.read(applied.getResponse().getContentAsString(), "$.selectionProcessId");
+
+        mockMvc.perform(get("/api/v1/selection-processes/{id}", processId.longValue())
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidates[0].answers.length()").value(2))
+                .andExpect(jsonPath("$.candidates[0].answers[0].questionPrompt")
+                        .value("Tem experiência com Java?"))
+                .andExpect(jsonPath("$.candidates[0].answers[0].answer").value("Sim"))
+                .andExpect(jsonPath("$.candidates[0].answers[1].answer").value("Sênior"));
     }
 
     @Test

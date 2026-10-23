@@ -11,6 +11,7 @@ import com.br.ats.consult.api.selectionprocess.domain.exception.SelectionProcess
 import com.br.ats.consult.api.selectionprocess.domain.model.CandidateApplication;
 import com.br.ats.consult.api.selectionprocess.domain.model.SelectionProcess;
 import com.br.ats.consult.api.selectionprocess.domain.port.out.SelectionProcessGateway;
+import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationAnswerEntity;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationEntity;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity.SelectionProcessEntity;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.mapper.CandidateApplicationMapper;
@@ -107,6 +108,18 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
                 .resumeStorageKey(application.getResume().getStorageKey())
                 .appliedAt(application.getAppliedAt() == null ? Instant.now() : application.getAppliedAt())
                 .build();
+
+        if (application.getAnswers() != null) {
+            application.getAnswers().forEach(answer -> entity.getAnswers().add(
+                    CandidateApplicationAnswerEntity.builder()
+                            .application(entity)
+                            .questionId(answer.questionId())
+                            .questionPrompt(answer.questionPrompt())
+                            .answer(answer.answer())
+                            .position(answer.position() == null ? 0 : answer.position())
+                            .build()
+            ));
+        }
 
         return applicationMapper.toDomain(applicationRepository.save(entity));
     }

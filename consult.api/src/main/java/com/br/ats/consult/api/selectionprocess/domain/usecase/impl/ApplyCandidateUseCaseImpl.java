@@ -1,5 +1,12 @@
 package com.br.ats.consult.api.selectionprocess.domain.usecase.impl;
 
+import com.br.ats.consult.api.applicationform.domain.enums.QuestionTypeEnum;
+import com.br.ats.consult.api.applicationform.domain.exception.InvalidApplicationAnswersException;
+import com.br.ats.consult.api.applicationform.domain.model.ApplicationForm;
+import com.br.ats.consult.api.applicationform.domain.model.ApplicationFormQuestion;
+import com.br.ats.consult.api.applicationform.domain.model.FormAnswer;
+import com.br.ats.consult.api.applicationform.domain.model.FormAnswerInput;
+import com.br.ats.consult.api.applicationform.domain.port.out.ApplicationFormGateway;
 import com.br.ats.consult.api.candidate.domain.model.Candidate;
 import com.br.ats.consult.api.candidate.domain.port.out.CandidateGateway;
 import com.br.ats.consult.api.client.domain.exception.ClientNotFoundException;
@@ -25,7 +32,10 @@ import com.br.ats.consult.api.selectionprocess.domain.usecase.ApplyCandidateUseC
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ApplyCandidateUseCaseImpl implements ApplyCandidateUseCase {
 
@@ -33,32 +43,37 @@ public class ApplyCandidateUseCaseImpl implements ApplyCandidateUseCase {
     private final CandidateGateway candidateGateway;
     private final ClientGateway clientGateway;
     private final JobPositionGateway jobPositionGateway;
+    private final ApplicationFormGateway formGateway;
     private final ResumeStorage resumeStorage;
 
     public ApplyCandidateUseCaseImpl(SelectionProcessGateway processGateway, CandidateGateway candidateGateway,
                                      ClientGateway clientGateway, JobPositionGateway jobPositionGateway,
-                                     ResumeStorage resumeStorage) {
+                                     ApplicationFormGateway formGateway, ResumeStorage resumeStorage) {
         this.processGateway = processGateway;
         this.candidateGateway = candidateGateway;
         this.clientGateway = clientGateway;
         this.jobPositionGateway = jobPositionGateway;
+        this.formGateway = formGateway;
         this.resumeStorage = resumeStorage;
     }
 
     @Override
     @Transactional
-    public CandidateApplicationResult applyToProcess(Long processId, Candidate candidate, ResumeUpload resume) {
+    public CandidateApplicationResult applyToProcess(Long processId, Candidate candidate, ResumeUpload resume,
+                                                     List<FormAnswerInput> answers) {
         SelectionProcess process = processGateway.findById(processId)
                 .orElseThrow(() -> new SelectionProcessNotFoundException(processId));
         if (!process.isOpen()) {
             throw new SelectionProcessNotOpenException(processId);
         }
-        return addApplication(process, candidate, resume);
+        List<FormAnswer> validatedAnswers = resolveAnswers(process.getJobPosition().getId(), answers);
+        return addApplication(process, candidate, resume, validatedAnswers);
     }
 
     @Override
     @Transactional
-    public CandidateApplicationResult applyToJob(Long jobId, Long clientId, Candidate candidate, ResumeUpload resume) {
+    public CandidateApplicationResult applyToJob(Long jobId, Long clientId, Candidate candidate, ResumeUpload resume,
+                                                 List<FormAnswerInput> answers) {
         JobPosition job = jobPositionGateway.findById(jobId)
                 .orElseThrow(() -> new JobPositionNotFoundException(jobId));
         if (job.getStatus() != JobStatusEnum.OPEN) {
@@ -76,11 +91,12 @@ public class ApplyCandidateUseCaseImpl implements ApplyCandidateUseCase {
                         .openedAt(LocalDate.now())
                         .build()));
 
-        return addApplication(process, candidate, resume);
+        List<FormAnswer> validatedAnswers = resolveAnswers(jobId, answers);
+        return addApplication(process, candidate, resume, validatedAnswers);
     }
 
     private CandidateApplicationResult addApplication(SelectionProcess process, Candidate candidate,
-                                                      ResumeUpload resume) {
+                                                      ResumeUpload resume, List<FormAnswer> answers) {
         if (resume == null) {
             throw new InvalidResumeException("O currículo em PDF é obrigatório.");
         }
@@ -105,6 +121,7 @@ public class ApplyCandidateUseCaseImpl implements ApplyCandidateUseCase {
                     .selectionProcessId(process.getId())
                     .candidate(persistedCandidate)
                     .resume(storedResume)
+                    .answers(answers == null ? List.of() : answers)
                     .build();
             application.validate();
 
@@ -114,5 +131,45 @@ public class ApplyCandidateUseCaseImpl implements ApplyCandidateUseCase {
             resumeStorage.delete(storedResume.getStorageKey());
             throw ex;
         }
+    }
+
+    private List<FormAnswer> resolveAnswers(Long jobPositionId, List<FormAnswerInput> submittedAnswers) {
+        if (jobPositionId == null) {
+            return List.of();
+        }
+        ApplicationForm form = formGateway.findByJobPositionId(jobPositionId)
+                .filter(ApplicationForm::isActive)
+                .orElse(null);
+        if (form == null || !form.hasQuestions()) {
+            return List.of();
+        }
+
+        Map<Long, String> submitted = new HashMap<>();
+        if (submittedAnswers != null) {
+            submittedAnswers.stream()
+                    .filter(answer -> answer.questionId() != null)
+                    .forEach(answer -> submitted.put(answer.questionId(),
+                            answer.answer() == null ? null : answer.answer().trim()));
+        }
+
+        List<FormAnswer> resolved = new ArrayList<>();
+        for (ApplicationFormQuestion question : form.getQuestions()) {
+            String value = submitted.get(question.getId());
+            if (question.isRequired() && (value == null || value.isBlank())) {
+                throw new InvalidApplicationAnswersException(
+                        "É obrigatório responder à pergunta: " + question.getPrompt());
+            }
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            if (question.getType() == QuestionTypeEnum.SINGLE_CHOICE
+                    && !question.normalizedOptions().contains(value)) {
+                throw new InvalidApplicationAnswersException(
+                        "A resposta da pergunta '" + question.getPrompt() + "' não é uma opção válida.");
+            }
+            resolved.add(new FormAnswer(question.getId(), question.getPrompt(), value,
+                    question.getPosition()));
+        }
+        return resolved;
     }
 }

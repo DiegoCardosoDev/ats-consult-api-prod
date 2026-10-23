@@ -10,10 +10,10 @@ import java.util.Optional;
 public interface SpringDataCandidateApplicationRepository
         extends JpaRepository<CandidateApplicationEntity, Long> {
 
-    @EntityGraph(attributePaths = "candidate")
+    @EntityGraph(attributePaths = {"candidate", "answers"})
     List<CandidateApplicationEntity> findByProcessIdOrderByAppliedAtDesc(Long processId);
 
-    @EntityGraph(attributePaths = {"candidate", "process"})
+    @EntityGraph(attributePaths = {"candidate", "process", "answers"})
     Optional<CandidateApplicationEntity> findWithDetailsById(Long id);
 
     boolean existsByProcessIdAndCandidateId(Long processId, Long candidateId);

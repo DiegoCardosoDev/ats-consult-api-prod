@@ -1,8 +1,10 @@
 package com.br.ats.consult.api.selectionprocess.infrastructure.persistence.mapper;
 
+import com.br.ats.consult.api.applicationform.domain.model.FormAnswer;
 import com.br.ats.consult.api.candidate.infrastructure.persistence.mapper.CandidateMapper;
 import com.br.ats.consult.api.selectionprocess.domain.model.CandidateApplication;
 import com.br.ats.consult.api.selectionprocess.domain.model.ResumeMetadata;
+import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationAnswerEntity;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -21,6 +23,15 @@ public interface CandidateApplicationMapper {
                 entity.getResumeContentType(),
                 entity.getResumeSizeBytes(),
                 entity.getResumeStorageKey()
+        );
+    }
+
+    default FormAnswer mapAnswer(CandidateApplicationAnswerEntity entity) {
+        return new FormAnswer(
+                entity.getQuestionId(),
+                entity.getQuestionPrompt(),
+                entity.getAnswer(),
+                entity.getPosition()
         );
     }
 }

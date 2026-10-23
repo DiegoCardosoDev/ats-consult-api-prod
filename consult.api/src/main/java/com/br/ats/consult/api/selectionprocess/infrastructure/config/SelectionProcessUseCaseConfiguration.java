@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.selectionprocess.infrastructure.config;
 
+import com.br.ats.consult.api.applicationform.domain.port.out.ApplicationFormGateway;
 import com.br.ats.consult.api.candidate.domain.port.out.CandidateGateway;
 import com.br.ats.consult.api.client.domain.port.out.ClientGateway;
 import com.br.ats.consult.api.job.domain.port.out.JobPositionGateway;
@@ -34,8 +35,9 @@ public class SelectionProcessUseCaseConfiguration {
                                                        CandidateGateway candidateGateway,
                                                        ClientGateway clientGateway,
                                                        JobPositionGateway jobPositionGateway,
+                                                       ApplicationFormGateway applicationFormGateway,
                                                        ResumeStorage resumeStorage) {
         return new ApplyCandidateUseCaseImpl(processGateway, candidateGateway, clientGateway,
-                jobPositionGateway, resumeStorage);
+                jobPositionGateway, applicationFormGateway, resumeStorage);
     }
 }

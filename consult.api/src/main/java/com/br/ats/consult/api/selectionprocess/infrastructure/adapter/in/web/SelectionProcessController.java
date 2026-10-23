@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web;
 
+import com.br.ats.consult.api.applicationform.domain.model.FormAnswerInput;
 import com.br.ats.consult.api.candidate.infrastructure.adapter.in.web.dto.CandidateRequest;
 import com.br.ats.consult.api.candidate.infrastructure.adapter.in.web.mapper.CandidateWebMapper;
 import com.br.ats.consult.api.selectionprocess.domain.exception.InvalidResumeException;
@@ -13,6 +14,7 @@ import com.br.ats.consult.api.selectionprocess.domain.usecase.CreateSelectionPro
 import com.br.ats.consult.api.selectionprocess.domain.usecase.FindSelectionProcessUseCase;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.ApplyCandidateResponse;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.CreateSelectionProcessRequest;
+import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.FormAnswersRequest;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.SelectionProcessResponse;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.SelectionProcessSummaryResponse;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.mapper.SelectionProcessWebMapper;
@@ -86,13 +88,24 @@ public class SelectionProcessController {
     public ResponseEntity<ApplyCandidateResponse> addCandidate(
             @PathVariable Long id,
             @RequestPart("candidate") @Valid CandidateRequest candidateRequest,
-            @RequestPart("resume") MultipartFile resume) {
+            @RequestPart("resume") MultipartFile resume,
+            @RequestPart(value = "answers", required = false) @Valid FormAnswersRequest answersRequest) {
         CandidateApplicationResult result = applyCandidateUseCase.applyToProcess(
                 id,
                 candidateWebMapper.toDomain(candidateRequest),
-                toResumeUpload(resume)
+                toResumeUpload(resume),
+                toAnswerInputs(answersRequest)
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(ApplyCandidateResponse.fromDomain(result));
+    }
+
+    private List<FormAnswerInput> toAnswerInputs(FormAnswersRequest request) {
+        if (request == null || request.answers() == null) {
+            return List.of();
+        }
+        return request.answers().stream()
+                .map(answer -> new FormAnswerInput(answer.questionId(), answer.answer()))
+                .toList();
     }
 
     private ResumeUpload toResumeUpload(MultipartFile file) {
