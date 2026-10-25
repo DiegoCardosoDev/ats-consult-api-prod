@@ -1,11 +1,9 @@
 package com.br.ats.consult.api.security.service;
 
-import com.br.ats.consult.api.security.JwtService;
 import com.br.ats.consult.api.security.dto.RegisterRequest;
 import com.br.ats.consult.api.security.exception.EmailAlreadyRegisteredException;
 import com.br.ats.consult.api.security.model.Role;
 import com.br.ats.consult.api.security.model.User;
-import com.br.ats.consult.api.security.model.UserPrincipal;
 import com.br.ats.consult.api.security.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,10 +18,9 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
 
     @Transactional
-    public String register(RegisterRequest request) {
+    public User register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
 
         if (userRepository.existsByEmail(email)) {
@@ -36,15 +33,7 @@ public class AuthService {
                 .role(Role.USER)
                 .build();
 
-        userRepository.save(newUser);
-
-        return jwtService.generateToken(UserPrincipal.from(newUser));
-    }
-
-    @Transactional
-    public void logout(String email) {
-        userRepository.findByEmail(normalizeEmail(email))
-                .ifPresent(user -> userRepository.incrementTokenVersion(user.getId()));
+        return userRepository.save(newUser);
     }
 
     private String normalizeEmail(String email) {

@@ -2,18 +2,8 @@
   "info": {
     "_postman_id": "c1a9f4d2-7b6e-4c3a-9f21-8d0e6b7a5c42",
     "name": "ATS TN Consultoria",
-    "description": "Collection da API do ATS (consult.api).\n\nComo usar:\n1. Ajuste `base_url` (padrão http://localhost:8080).\n2. Execute `Autenticação > Login` com um usuário ADMIN ou TECH_RECRUITER. O token é extraído do cookie `auth_token`.\n3. Execute as pastas na ordem: Clientes, Tecnologias, Vagas, Formulário, Processos, Candidaturas/Kanban e Comentários.\n4. As variáveis de ID são preenchidas automaticamente pelos testes das requisições de criação.\n\nAutenticação: cookie HttpOnly `auth_token` (Postman mantém o cookie automaticamente). A collection também define Authorization Bearer com a variável `token`, aceita pelo backend como fallback.\n\nCSRF: habilitado em produção. Execute `Autenticação > CSRF` antes das escritas. Em desenvolvimento (`spring.profiles.active=dev`) o CSRF está desabilitado.\n\nUploads: nas requisições multipart, selecione um arquivo PDF real no campo `resume` (o placeholder `/path/to/resume.pdf` não existe por padrão).",
+    "description": "Collection da API do ATS (consult.api).\n\nComo usar:\n1. Ajuste `base_url` (padrão http://localhost:8080).\n2. Execute `Autenticação > Login` com um usuário ADMIN ou TECH_RECRUITER. A sessão fica num cookie HttpOnly `ats_session`.\n3. Execute as pastas na ordem: Clientes, Tecnologias, Vagas, Formulário, Processos, Candidaturas/Kanban e Comentários.\n4. As variáveis de ID são preenchidas automaticamente pelos testes das requisições de criação.\n\nAutenticação: sessão opaca no servidor, mantida no cookie HttpOnly `ats_session` (Postman envia o cookie automaticamente).\n\nCSRF: habilitado em produção. Execute `Autenticação > CSRF` antes das escritas. Em desenvolvimento (`spring.profiles.active=dev`) o CSRF está desabilitado.\n\nUploads: nas requisições multipart, selecione um arquivo PDF real no campo `resume` (o placeholder `/path/to/resume.pdf` não existe por padrão).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{token}}",
-        "type": "string"
-      }
-    ]
   },
   "event": [
     {
@@ -49,7 +39,7 @@
   ],
   "variable": [
     { "key": "base_url", "value": "http://localhost:8080", "type": "string" },
-    { "key": "token", "value": "", "type": "string" },
+    { "key": "session_cookie_name", "value": "ats_session", "type": "string" },
     { "key": "admin_email", "value": "admin@tnconsultoria.com", "type": "string" },
     { "key": "admin_password", "value": "123456", "type": "string" },
     { "key": "client_id", "value": "1", "type": "string" },
@@ -108,21 +98,11 @@
                   "pm.test('Login efetuado', function () {",
                   "  pm.response.to.have.status(200);",
                   "});",
-                  "let cookieToken = null;",
-                  "try { cookieToken = pm.cookies.get('auth_token'); } catch (e) { cookieToken = null; }",
-                  "if (!cookieToken) {",
+                  "pm.test('Sessão criada no servidor', function () {",
                   "  const setCookie = pm.response.headers.get('Set-Cookie') || '';",
-                  "  const match = setCookie.match(/auth_token=([^;]+)/);",
-                  "  if (match) { cookieToken = match[1]; }",
-                  "}",
-                  "if (cookieToken) {",
-                  "  pm.collectionVariables.set('token', cookieToken);",
-                  "  pm.test('Token extraído do cookie', function () {",
-                  "    pm.expect(cookieToken.length).to.be.above(20);",
-                  "  });",
-                  "} else {",
-                  "  console.warn('Token não encontrado no Set-Cookie; verifique o cookie auth_token no Postman.');",
-                  "}"
+                  "  const cookieName = pm.collectionVariables.get('session_cookie_name') || 'ats_session';",
+                  "  pm.expect(setCookie).to.include(cookieName + '=');",
+                  "});"
                 ]
               }
             }
@@ -142,7 +122,39 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "login"]
             },
-            "description": "Autentica e devolve Set-Cookie auth_token (HttpOnly)."
+            "description": "Autentica e cria uma sessão opaca no servidor; devolve Set-Cookie ats_session (HttpOnly)."
+          },
+          "response": []
+        },
+        {
+          "name": "Sessão atual",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sessão válida (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Devolve o usuário autenticado', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.email).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.role).to.be.oneOf(['ADMIN', 'TECH_RECRUITER', 'USER']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Valida a sessão opaca no servidor pelo cookie HttpOnly e devolve id, email e role."
           },
           "response": []
         },
@@ -176,7 +188,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "register"]
             },
-            "description": "Cria usuário com papel USER e devolve cookie de autenticação."
+            "description": "Cria usuário com papel USER e cria sessão no servidor. Desativado no perfil prod por padrão; habilite com REGISTRATION_ENABLED=true."
           },
           "response": []
         },
@@ -191,7 +203,12 @@
                   "pm.test('Logout efetuado', function () {",
                   "  pm.response.to.have.status(200);",
                   "});",
-                  "pm.collectionVariables.set('token', '');"
+                  "pm.test('Cookie de sessão removido', function () {",
+                  "  const setCookie = pm.response.headers.get('Set-Cookie') || '';",
+                  "  const cookieName = pm.collectionVariables.get('session_cookie_name') || 'ats_session';",
+                  "  pm.expect(setCookie).to.include(cookieName + '=');",
+                  "  pm.expect(setCookie.toLowerCase()).to.include('max-age=0');",
+                  "});"
                 ]
               }
             }
@@ -204,7 +221,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "logout"]
             },
-            "description": "Invalida o token atual e limpa o cookie."
+            "description": "Invalida a sessão no servidor e limpa o cookie."
           },
           "response": []
         }

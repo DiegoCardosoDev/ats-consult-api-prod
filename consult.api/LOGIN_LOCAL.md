@@ -1,6 +1,6 @@
 # Login local
 
-Guia rápido para subir o backend, o frontend e testar o login localmente.
+Guia rápido para subir o backend, o frontend e testar o login localmente. Para entender o fluxo completo de autenticação (sessão, CSRF, rate limit e frontend), consulte [`docs/fluxo-login.md`](../docs/fluxo-login.md).
 
 ## Requisitos
 
@@ -57,12 +57,13 @@ export DB_PASSWORD='a-tua-password'
 cd /home/diegocardoso/Documentos/ats-api-manager/consult.api
 
 export SPRING_PROFILES_ACTIVE=dev
-export JWT_SECRET="$(openssl rand -base64 48)"
 
 ./mvnw spring-boot:run
 ```
 
-O perfil `dev` é importante: desativa o CSRF para o Angular em `localhost:4200` e cria o administrador inicial.
+O perfil `dev` é importante: desativa o CSRF para facilitar chamadas diretas à API e cria o administrador inicial. O Angular já trata do CSRF quando `CSRF_ENABLED=true`.
+
+O auto-registo público está habilitado em `dev` e desativado por padrão em `prod` (`REGISTRATION_ENABLED`).
 
 Verifica se a API subiu:
 
@@ -103,12 +104,26 @@ As variáveis `APP_ADMIN_EMAIL` e `APP_ADMIN_PASSWORD` substituem estes valores.
 Com o perfil `dev` ativo:
 
 ```bash
-curl -i -X POST http://localhost:8080/api/v1/auth/login \
+curl -i -c cookies.txt -X POST http://localhost:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@tnconsultoria.com","password":"123456"}'
 ```
 
-Resposta esperada: `HTTP/1.1 200` com a mensagem `Login efetuado com sucesso`.
+Resposta esperada: `HTTP/1.1 200` com a mensagem `Login efetuado com sucesso` e um cookie de sessão `ats_session` `HttpOnly`. A sessão fica no servidor; reiniciar o backend encerra todas as sessões.
+
+Valida a sessão e consulta o usuário autenticado:
+
+```bash
+curl -b cookies.txt http://localhost:8080/api/v1/auth/me
+```
+
+Resposta esperada: `{"id":1,"email":"admin@tnconsultoria.com","role":"ADMIN"}`.
+
+Termina a sessão (invalida no servidor e limpa o cookie):
+
+```bash
+curl -i -b cookies.txt -X POST http://localhost:8080/api/v1/auth/logout
+```
 
 ## 6. Problemas comuns
 
@@ -127,7 +142,7 @@ Nos logs deve aparecer:
 The following 1 profile is active: "dev"
 ```
 
-Se precisares de manter o CSRF ativo, o cliente tem de obter o token em `GET /api/v1/auth/csrf` e enviá-lo no cabeçalho `X-XSRF-TOKEN`.
+Se precisares de manter o CSRF ativo em chamadas manuais, obtém o cookie em `GET /api/v1/auth/csrf` e envia o valor no cabeçalho `X-XSRF-TOKEN`. O frontend faz isto automaticamente através do `csrf.interceptor.ts`.
 
 ### 401 - Credenciais inválidas
 

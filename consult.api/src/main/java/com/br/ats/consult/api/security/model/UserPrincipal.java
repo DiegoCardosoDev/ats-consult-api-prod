@@ -4,26 +4,27 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-public final class UserPrincipal implements UserDetails, TokenVersionedUserDetails {
+public final class UserPrincipal implements UserDetails, Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final Long id;
     private final String email;
     private final String password;
     private final Role role;
     private final boolean enabled;
-    private final long tokenVersion;
 
-    private UserPrincipal(Long id, String email, String password, Role role, boolean enabled, long tokenVersion) {
+    private UserPrincipal(Long id, String email, String password, Role role, boolean enabled) {
         this.id = id;
         this.email = email;
         this.password = password;
         this.role = Objects.requireNonNull(role, "A role do utilizador é obrigatória");
         this.enabled = enabled;
-        this.tokenVersion = tokenVersion;
     }
 
     public static UserPrincipal from(User user) {
@@ -33,8 +34,7 @@ public final class UserPrincipal implements UserDetails, TokenVersionedUserDetai
                 user.getEmail(),
                 user.getPassword(),
                 user.getRole(),
-                user.isEnabled(),
-                user.getTokenVersion()
+                user.isEnabled()
         );
     }
 
@@ -44,11 +44,6 @@ public final class UserPrincipal implements UserDetails, TokenVersionedUserDetai
 
     public Role getRole() {
         return role;
-    }
-
-    @Override
-    public long getTokenVersion() {
-        return tokenVersion;
     }
 
     @Override

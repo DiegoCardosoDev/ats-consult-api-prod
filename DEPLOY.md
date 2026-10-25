@@ -6,13 +6,7 @@ O `Dockerfile` da raiz builda o Angular e o Spring Boot em um unico container. O
 
 ## Antes de comecar
 
-Gere um segredo JWT valido (Base64 com no minimo 32 bytes):
-
-```bash
-openssl rand -base64 48
-```
-
-Separe tambem as credenciais do banco e do administrador inicial:
+A autenticação usa sessões opacas no servidor; não há segredo JWT para gerar. Separe as credenciais do banco e do administrador inicial:
 
 ```text
 APP_ADMIN_EMAIL=admin@seudominio.com
@@ -38,7 +32,6 @@ DB_PASSWORD=SUA_SENHA
 
 | Variavel | Valor |
 |---|---|
-| `JWT_SECRET` | saida do `openssl rand -base64 48` |
 | `DB_URL` | URL JDBC do Neon |
 | `DB_USERNAME` | usuario do Neon |
 | `DB_PASSWORD` | senha do Neon |
@@ -104,7 +97,6 @@ O perfil `dev` e o padrao e mantem o comportamento anterior:
 docker compose -f consult.api/docker-compose.yml up -d
 
 # API
-export JWT_SECRET="$(openssl rand -base64 48)"
 cd consult.api && ./mvnw spring-boot:run
 
 # frontend
@@ -118,16 +110,16 @@ No perfil `dev` o admin padrao continua sendo `admin@tnconsultoria.com` / `12345
 | Variavel | Obrigatoria em prod | Descricao |
 |---|---|---|
 | `SPRING_PROFILES_ACTIVE` | sim (`prod`) | Ativa as configuracoes de producao |
-| `JWT_SECRET` | sim | Base64 com >= 32 bytes |
 | `DB_URL` | sim | JDBC do Postgres |
 | `DB_USERNAME` | sim | Usuario do banco |
 | `DB_PASSWORD` | sim | Senha do banco |
 | `APP_ADMIN_EMAIL` | opcional | Cria o admin inicial |
 | `APP_ADMIN_PASSWORD` | opcional | Senha do admin inicial |
+| `SESSION_TIMEOUT` | nao | Timeout de inatividade (padrao `30m`) |
+| `SESSION_COOKIE_NAME` | nao | Nome do cookie (padrao `ats_session`) |
 | `COOKIE_SECURE` | nao | `true` em HTTPS |
-| `COOKIE_SAME_SITE` | nao | `Lax` no mesmo dominio |
+| `COOKIE_SAME_SITE` | nao | `Strict` no mesmo dominio |
 | `CORS_ALLOWED_ORIGINS` | nao | Só se o front estiver em outro dominio |
-| `JWT_EXPIRATION_MS` | nao | Padrao 8 horas |
 | `DOMAIN` | so no compose | Dominio usado pelo Caddy |
 
 Se o frontend for hospedado separado da API (por exemplo, Angular na Netlify e API no Render), configure:
@@ -146,12 +138,13 @@ COOKIE_SAME_SITE=None
 - Listagem e cadastro de vagas/tecnologias funcionam.
 - Atualizar a pagina em `/jobs/1` nao da 404.
 - O navegador mostra o cadeado HTTPS.
-- O cookie `auth_token` aparece como `HttpOnly`, `Secure` e `SameSite=Lax`.
+- O cookie `ats_session` aparece como `HttpOnly`, `Secure` e `SameSite=Strict`.
+- A sessão sobrevive a atualizações de página, mas não a reinícios/deploys (store em memória).
 - A primeira resposta do Render free pode demorar por causa do cold start.
 
 ## Problemas comuns
 
-- `JWT_SECRET nao esta definida`: defina a variavel no painel/compose.
+- Usuarios voltaram a precisar de login apos um deploy: esperado, a sessao fica em memoria e e encerrada no reinicio. Para persistir sessoes entre replicas/reinicios, use Spring Session com Redis ou banco.
 - API retorna 403 apos login: o cookie nao foi enviado. Verifique `Secure`, `SameSite`, dominio e CORS.
 - Flyway falha: confira `DB_URL`, usuario/senha e se o banco permite conexao SSL.
 - Porta 8080 ocupada localmente: use `PORT=8081 ./mvnw spring-boot:run`.

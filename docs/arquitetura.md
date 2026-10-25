@@ -20,7 +20,7 @@ Principais capacidades:
 - Upload e download de currículo em PDF.
 - Quadro Kanban por processo seletivo com 8 fases.
 - Comentários por candidatura, com autor e data/hora.
-- Autenticação por cookie HttpOnly, autorização por papéis e proteção CSRF.
+- Autenticação por sessão opaca no servidor com cookie HttpOnly, autorização por papéis e proteção CSRF.
 
 ## 2. Stack
 
@@ -29,7 +29,7 @@ Principais capacidades:
 - Java 21
 - Spring Boot 4.1.1
 - Spring Web MVC
-- Spring Security + JWT
+- Spring Security + sessão opaca no servidor
 - Spring Data JPA + Hibernate
 - Flyway
 - PostgreSQL (H2 nos testes)
@@ -59,7 +59,7 @@ ats-api-manager/
 │   │   ├── candidate/                # Cadastro e busca de candidatos
 │   │   ├── client/                   # Cadastro e busca de clientes
 │   │   ├── job/                      # Vagas, localização, tecnologias e enums
-│   │   ├── security/                 # Login, JWT, cookies, CSRF e rate limit
+│   │   ├── security/                 # Login, sessão, cookies, CSRF e rate limit
 │   │   ├── selectionprocess/         # Processos, candidaturas, Kanban e comentários
 │   │   ├── shared/                   # Erros de API, paginação e SPA forward
 │   │   ├── technology/               # Catálogo de tecnologias
@@ -133,7 +133,7 @@ Características:
 | `job` | Vagas, vínculo obrigatório com cliente, localização, salários e tecnologias |
 | `applicationform` | Formulário de perguntas por vaga e validação de respostas |
 | `selectionprocess` | Processos seletivos, candidaturas, currículos, Kanban e comentários |
-| `security` | Autenticação, autorização, JWT, cookies, CSRF e rate limiting |
+| `security` | Autenticação, autorização, sessão no servidor, cookies, CSRF e rate limiting |
 | `shared` | Erros da API, paginação e roteamento SPA |
 
 ## 5. Modelo de dados
@@ -283,9 +283,10 @@ Paginação (`PageResponse`): `content`, `page`, `size`, `totalElements`, `total
 | Método | Caminho | Acesso | Descrição |
 | --- | --- | --- | --- |
 | GET | `/auth/csrf` ou `/api/v1/auth/csrf` | Público | Gera cookie CSRF |
-| POST | `/auth/login` ou `/api/v1/auth/login` | Público | Login; retorna `Set-Cookie: auth_token` |
-| POST | `/auth/register` ou `/api/v1/auth/register` | Público | Registo com papel `USER`; retorna cookie e 201 |
-| POST | `/auth/logout` ou `/api/v1/auth/logout` | Autenticado | Invalida token e limpa cookie |
+| POST | `/auth/login` ou `/api/v1/auth/login` | Público | Login; cria sessão e retorna `Set-Cookie: ats_session` |
+| GET | `/auth/me` ou `/api/v1/auth/me` | Autenticado | Valida a sessão e devolve `id`, `email` e `role` |
+| POST | `/auth/register` ou `/api/v1/auth/register` | Público | Registo com papel `USER`; desativado em `prod` por padrão |
+| POST | `/auth/logout` ou `/api/v1/auth/logout` | Autenticado | Invalida a sessão no servidor e limpa o cookie |
 
 ### Clientes
 
@@ -413,16 +414,32 @@ Content-Type: application/json
 
 ## 8. Segurança
 
+> O detalhe do login, sessão, CSRF, rate limit e fluxo no frontend está em [`fluxo-login.md`](./fluxo-login.md).
+
 ### Autenticação
 
-- Login gera um JWT assinado e o envia em cookie `auth_token`:
+- A autenticação usa uma sessão opaca no servidor; o navegador guarda apenas o ID de sessão no cookie `ats_session`:
   - `HttpOnly`
+  - `Secure` obrigatório em produção
   - `SameSite=Strict` por padrão
-  - `Secure` configurável
-  - expiração padrão de 8 horas
-- `JwtAuthenticationFilter` valida o cookie e também aceita `Authorization: Bearer <token>`.
-- O token contém a versão do usuário; logout incrementa `token_version`, invalidando tokens anteriores.
-- Sessão é `STATELESS`.
+  - sem `Max-Age`: é um cookie de sessão, descartado ao fechar o navegador
+  - timeout de inatividade padrão de 30 minutos (`SESSION_TIMEOUT`)
+- O tracking de sessão por URL está desativado; apenas cookie é aceito.
+- A sessão é invalidada no logout e recriada com novo ID no login (proteção contra session fixation).
+- O servidor mantém os dados da sessão em memória. Reiniciar a aplicação encerra todas as sessões; para múltiplas réplicas é necessário Spring Session com Redis/BD.
+- O auto-registo público fica disponível em desenvolvimento, mas é desativado por padrão no perfil `prod` (`REGISTRATION_ENABLED=false`).
+
+Fluxo de login:
+
+1. O Angular obtém/renova o cookie CSRF em `GET /auth/csrf`.
+2. O Angular envia `POST /auth/login` com `withCredentials` e o header `X-XSRF-TOKEN`.
+3. O backend valida CSRF, aplica rate limit por IP e conta e autentica com BCrypt via `AuthenticationManager`.
+4. O backend cria uma sessão opaca no servidor e envia o cookie `ats_session` `HttpOnly`.
+5. O Angular chama `GET /auth/me` para validar a sessão e obter `id`, `email` e `role`, mantendo o estado em memória (signal), não em `localStorage`.
+6. Em cada requisição, o Spring Security carrega o contexto de autenticação a partir da sessão.
+7. Em `401`, o Angular limpa o estado local e redireciona para `/login`; o guard valida a sessão no backend antes de liberar rotas protegidas.
+8. No logout, o backend invalida a sessão, limpa o cookie `ats_session` e descarta o contexto de segurança.
+9. A sessão expira após 30 minutos sem atividade; fechar o navegador descarta o cookie de sessão.
 
 ### Autorização
 
@@ -436,7 +453,8 @@ Content-Type: application/json
 
 - Habilitado por padrão em produção (`CSRF_ENABLED=true`).
 - Cookie `XSRF-TOKEN` (legível pelo JavaScript) deve ser enviado no header `X-XSRF-TOKEN`.
-- O perfil `dev` desativa CSRF para facilitar o Angular em `localhost:4200`.
+- O `csrf.interceptor.ts` garante o token em requisições `POST`, `PUT`, `PATCH` e `DELETE`, inclusive quando front e API estão em origens diferentes.
+- O perfil `dev` desativa CSRF para facilitar o Angular em `localhost:4200`; a configuração é validada e não pode ser desativada em `prod`.
 
 ### CORS
 
@@ -446,9 +464,10 @@ Content-Type: application/json
 
 ### Rate limiting
 
-- Login: limite por IP e por conta.
-- Registo: limite por IP e por conta.
+- Login: limite por IP e por conta; o contador da conta é limpo após sucesso.
+- Registo: limite por IP e por conta (quando o auto-registo está habilitado).
 - Configuração em `RATE_LIMIT_*`.
+- O contador é em memória, por instância; em múltiplas réplicas é necessário um store compartilhado.
 - Respostas excedentes retornam `429 Too Many Requests`.
 
 ## 9. Frontend
@@ -457,9 +476,10 @@ Content-Type: application/json
 
 - Componentes standalone, sem NgModules.
 - Rotas em `app.routes.ts`.
-- `AuthService` centraliza login, logout e estado do usuário.
-- `auth.interceptor.ts` adiciona `withCredentials` e o header CSRF quando necessário.
-- `auth.guard.ts` protege rotas autenticadas.
+- `AuthService` centraliza login, logout, `/auth/me` e o estado do usuário em um signal em memória.
+- `csrf.interceptor.ts` obtém o cookie `XSRF-TOKEN` e injeta `X-XSRF-TOKEN` nas requisições mutáveis.
+- `auth.interceptor.ts` adiciona `withCredentials` e limpa a sessão/redireciona em `401`.
+- `auth.guard.ts` valida a sessão no backend via `/auth/me` antes de liberar rotas autenticadas.
 - Serviços por feature (`job-position.service.ts`, `selection-process.service.ts`, etc.) usam `environment.apiBaseUrl`.
 
 ### Módulo de processos seletivos
@@ -481,7 +501,8 @@ Componentes principais:
 
 - Bootstrap 5.3 e Bootstrap Icons carregados no `index.html`.
 - O Kanban usa variáveis CSS por coluna (`--column-color`, `--column-soft`).
-- Cards usam `border-left` colorido, avatar com inicial, contador de comentários e ações de detalhe.
+- Cabeçalhos das colunas e headers dos cards usam a cor da fase com texto branco.
+- Cards usam avatar com inicial, contador de comentários e ações de detalhe.
 
 ## 10. Configuração e execução
 
@@ -495,11 +516,12 @@ Variáveis relevantes:
 | `PORT` | `8080` | Porta HTTP |
 | `DB_URL` | `jdbc:postgresql://localhost:5432/ats_db` | Banco |
 | `DB_USERNAME` / `DB_PASSWORD` | `postgres` / `postgres` | Credenciais |
-| `JWT_SECRET` | — | Base64 com pelo menos 32 bytes; obrigatório |
-| `JWT_EXPIRATION_MS` | `28800000` | Expiração do token |
+| `SESSION_TIMEOUT` | `30m` | Timeout de inatividade da sessão |
+| `SESSION_COOKIE_NAME` | `ats_session` | Nome do cookie de sessão |
 | `COOKIE_SECURE` | `false` | Cookie apenas HTTPS |
 | `COOKIE_SAME_SITE` | `Strict` | SameSite do cookie |
 | `CSRF_ENABLED` | `true` | Habilita CSRF (dev desativa) |
+| `REGISTRATION_ENABLED` | `true` (dev) / `false` (prod) | Permite auto-registo público |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` | Origens permitidas |
 | `RESUME_MAX_SIZE_BYTES` | `10485760` | Tamanho máximo do PDF |
 | `RESUME_STORAGE` | `local` | `local` ou `s3` |
@@ -529,7 +551,8 @@ npm run build
 ## 11. Testes
 
 - `ApplicationTests`: carregamento do contexto Spring.
-- `SecurityAuthorizationTest`: autenticação, autorização por papel, CSRF, rate limit e validação de vaga com cliente.
+- `SecurityAuthorizationTest`: autenticação, `/auth/me`, autorização por papel, CSRF, rate limit e validação de vaga com cliente.
+- `RegistrationDisabledTest`: garante que o auto-registo retorna 403 quando desativado.
 - `CandidateSelectionProcessIntegrationTest`: candidatura por vaga/processo, currículo, formulário, busca, download, Kanban e comentários.
 
 Comando:
@@ -545,5 +568,8 @@ mvn test
 - A ordenação de comentários é garantida no caso de uso, independentemente da ordem do banco.
 - A coleção de comentários na entidade JPA é `Set` para evitar `MultipleBagFetchException` ao buscar `answers` e `comments` juntos.
 - A vaga antiga sem cliente é migrada para um cliente padrão na `V9`.
-- O cadastro público cria usuários `USER`; para operar escritas é necessário um usuário `ADMIN` ou `TECH_RECRUITER`.
+- O cadastro público cria usuários `USER` apenas quando `REGISTRATION_ENABLED=true`; em `prod` vem desativado. Para operar escritas é necessário um usuário `ADMIN` ou `TECH_RECRUITER`.
+- A sessão no frontend é validada por `/auth/me`; `localStorage` não é usado como prova de autenticação.
+- O cookie de sessão é `HttpOnly` e o CSRF usa cookie separado `XSRF-TOKEN`, conforme o padrão double-submit do Spring Security.
+- A sessão é mantida em memória no servidor; reinícios encerram sessões e múltiplas réplicas exigem store compartilhado (Spring Session/Redis).
 - Os endpoints de escrita do formulário de candidatura usam a regra fallback `/api/**` (apenas autenticado), diferente das demais escritas que exigem papel específico.

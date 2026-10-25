@@ -1,15 +1,23 @@
 package com.br.ats.consult.api.security;
 
+import com.br.ats.consult.api.security.model.Role;
+import com.br.ats.consult.api.security.model.User;
+import com.br.ats.consult.api.security.repository.UserRepository;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -25,6 +33,12 @@ class SecurityAuthorizationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Test
     void jobPositionsRequireAuthentication() throws Exception {
@@ -48,6 +62,69 @@ class SecurityAuthorizationTest {
     void logoutRequiresAuthentication() throws Exception {
         mockMvc.perform(post("/api/v1/auth/logout").with(csrf()))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void currentUserEndpointRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void loginCreatesServerSideSessionAndCurrentUserEndpointResolvesSession() throws Exception {
+        String email = "session-user@example.com";
+        userRepository.save(User.builder()
+                .email(email)
+                .password(passwordEncoder.encode("valid-password"))
+                .role(Role.TECH_RECRUITER)
+                .build());
+
+        MvcResult login = mockMvc.perform(post("/api/v1/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"valid-password"}
+                                """.formatted(email)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
+        assertNotNull(session);
+        assertNull(login.getResponse().getCookie("auth_token"));
+
+        mockMvc.perform(get("/api/v1/auth/me").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.role").value("TECH_RECRUITER"));
+    }
+
+    @Test
+    void logoutInvalidatesServerSideSession() throws Exception {
+        String email = "logout-user@example.com";
+        userRepository.save(User.builder()
+                .email(email)
+                .password(passwordEncoder.encode("valid-password"))
+                .role(Role.USER)
+                .build());
+
+        MvcResult login = mockMvc.perform(post("/api/v1/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"valid-password"}
+                                """.formatted(email)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
+        assertNotNull(session);
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .session(session)
+                        .with(csrf()))
+                .andExpect(status().isOk());
+
+        assertTrue(session.isInvalid());
     }
 
     @Test

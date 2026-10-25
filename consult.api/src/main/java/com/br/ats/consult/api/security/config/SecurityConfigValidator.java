@@ -25,9 +25,6 @@ public class SecurityConfigValidator {
     @Value("${app.security.cookie.same-site:Strict}")
     private String cookieSameSite;
 
-    @Value("${app.security.cookie.max-age-seconds:28800}")
-    private long cookieMaxAgeSeconds;
-
     public SecurityConfigValidator(Environment environment) {
         this.environment = environment;
     }
@@ -41,9 +38,6 @@ public class SecurityConfigValidator {
         }
         if ("none".equals(sameSite) && !cookieSecure) {
             throw new IllegalStateException("COOKIE_SAME_SITE=None exige COOKIE_SECURE=true.");
-        }
-        if (cookieMaxAgeSeconds <= 0) {
-            throw new IllegalStateException("COOKIE_MAX_AGE_SECONDS deve ser maior que zero.");
         }
 
         if (environment.acceptsProfiles(Profiles.of("prod"))) {

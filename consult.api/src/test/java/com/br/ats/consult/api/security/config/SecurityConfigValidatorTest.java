@@ -45,7 +45,6 @@ class SecurityConfigValidatorTest {
         ReflectionTestUtils.setField(validator, "csrfEnabled", csrfEnabled);
         ReflectionTestUtils.setField(validator, "cookieSecure", cookieSecure);
         ReflectionTestUtils.setField(validator, "cookieSameSite", sameSite);
-        ReflectionTestUtils.setField(validator, "cookieMaxAgeSeconds", 100L);
         return validator;
     }
 }

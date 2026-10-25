@@ -1,9 +1,12 @@
 package com.br.ats.consult.api.security;
 
+import com.br.ats.consult.api.security.dto.AuthUserResponse;
 import com.br.ats.consult.api.security.dto.MessageResponse;
 import com.br.ats.consult.api.security.dto.RegisterRequest;
+import com.br.ats.consult.api.security.model.User;
 import com.br.ats.consult.api.security.model.UserPrincipal;
 import com.br.ats.consult.api.security.service.AuthService;
+import com.br.ats.consult.api.security.service.SessionAuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -15,7 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,19 +29,34 @@ import java.util.Locale;
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
     private final AuthService authService;
-    private final AuthCookieService authCookieService;
+    private final SessionAuthenticationService sessionAuthenticationService;
+    private final SessionCookieService sessionCookieService;
     private final RateLimitService rateLimitService;
     private final CsrfTokenRepository csrfTokenRepository;
 
     @Value("${app.security.rate-limit.ip-max-attempts:50}")
     private int ipMaxAttempts;
 
+    @Value("${app.security.registration.enabled:true}")
+    private boolean registrationEnabled;
+
     @GetMapping("/csrf")
     public ResponseEntity<Void> csrf(HttpServletRequest request, HttpServletResponse response) {
         csrfTokenRepository.loadDeferredToken(request, response).get();
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<AuthUserResponse> me(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(new AuthUserResponse(
+                principal.getId(),
+                principal.getUsername(),
+                principal.getRole().name()
+        ));
     }
 
     @PostMapping("/login")
@@ -56,22 +73,16 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(email, request.password())
         );
 
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String jwtToken = jwtService.generateToken(userDetails);
         rateLimitService.reset(accountKey);
+        sessionAuthenticationService.establish(authentication, httpRequest, response);
 
-        response.addHeader(HttpHeaders.SET_COOKIE, authCookieService.create(jwtToken).toString());
         return ResponseEntity.ok(new MessageResponse("Login efetuado com sucesso"));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<MessageResponse> logout(Authentication authentication,
-                                                  HttpServletResponse response) {
-        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
-            authService.logout(principal.getUsername());
-        }
-
-        response.addHeader(HttpHeaders.SET_COOKIE, authCookieService.clear().toString());
+    public ResponseEntity<MessageResponse> logout(HttpServletRequest request, HttpServletResponse response) {
+        sessionAuthenticationService.invalidate(request);
+        response.addHeader(HttpHeaders.SET_COOKIE, sessionCookieService.clear().toString());
         return ResponseEntity.ok(new MessageResponse("Logout efetuado com sucesso"));
     }
 
@@ -79,12 +90,23 @@ public class AuthController {
     public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterRequest request,
                                                     HttpServletRequest httpRequest,
                                                     HttpServletResponse response) {
+        if (!registrationEnabled) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new MessageResponse("O auto-registo está desativado."));
+        }
+
         String email = normalizeEmail(request.email());
         rateLimitService.check(clientKey(httpRequest, "register"), ipMaxAttempts);
         rateLimitService.check("register:account:" + email);
 
-        String jwtToken = authService.register(request);
-        response.addHeader(HttpHeaders.SET_COOKIE, authCookieService.create(jwtToken).toString());
+        User user = authService.register(request);
+        UserPrincipal principal = UserPrincipal.from(user);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                principal.getAuthorities()
+        );
+        sessionAuthenticationService.establish(authentication, httpRequest, response);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new MessageResponse("Registo efetuado com sucesso"));

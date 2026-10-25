@@ -10,15 +10,11 @@ Este guia sobe o projeto inteiro em um único serviço do Render:
 
 ---
 
-## 1. Gerar o segredo JWT
+## 1. Sessões no servidor
 
-No seu computador:
+A autenticação usa sessões opacas mantidas em memória pelo Spring Boot. Não há segredo JWT para gerar. O timeout padrão é de 30 minutos de inatividade (`SESSION_TIMEOUT`) e o cookie é `ats_session` (`SESSION_COOKIE_NAME`).
 
-```bash
-openssl rand -base64 48
-```
-
-Guarde o resultado. Ele será o `JWT_SECRET`. Não use o mesmo segredo de desenvolvimento e não comite esse valor.
+> Como a sessão fica em memória, cada deploy/reinício do Render encerra as sessões e os usuários precisam entrar novamente. Para múltiplas réplicas, seria necessário Spring Session com Redis ou banco.
 
 ---
 
@@ -88,14 +84,13 @@ Não envie o arquivo `.env`; ele já está no `.gitignore`.
 
 | Variável | Valor |
 |---|---|
-| `JWT_SECRET` | resultado do `openssl rand -base64 48` |
 | `DB_URL` | URL JDBC do Neon |
 | `DB_USERNAME` | usuário do Neon |
 | `DB_PASSWORD` | senha do Neon |
 | `APP_ADMIN_EMAIL` | email do administrador do sistema |
 | `APP_ADMIN_PASSWORD` | senha forte do administrador |
 
-As variáveis `SPRING_PROFILES_ACTIVE=prod`, `COOKIE_SECURE=true` e `COOKIE_SAME_SITE=Lax` já vêm definidas no `render.yaml`.
+As variáveis `SPRING_PROFILES_ACTIVE=prod`, `COOKIE_SECURE=true`, `COOKIE_SAME_SITE=Strict`, `SESSION_TIMEOUT=30m` e `SESSION_COOKIE_NAME=ats_session` já vêm definidas no `render.yaml`.
 
 Não defina `PORT`: o Render injeta essa variável automaticamente e a aplicação já respeita.
 
@@ -146,10 +141,10 @@ Na URL do Render:
 3. Atualize a página em uma rota interna, por exemplo `/jobs/1`.
    - Deve continuar funcionando, sem 404.
 4. Faça logout.
-5. No DevTools do navegador, em **Application > Cookies**, confirme que o cookie `auth_token` está:
+5. No DevTools do navegador, em **Application > Cookies**, confirme que o cookie `ats_session` está:
    - `HttpOnly`
    - `Secure`
-   - `SameSite=Lax`
+   - `SameSite=Strict`
 6. Confirme que o cadeado HTTPS aparece na barra de endereço.
 
 ---
@@ -181,15 +176,9 @@ git commit -m "Remove git interno do frontend"
 git push
 ```
 
-### `JWT_SECRET ... nao esta definida` ou erro de Base64
+### Usuários precisam de login após cada deploy
 
-Gere novamente:
-
-```bash
-openssl rand -base64 48
-```
-
-Atualize `JWT_SECRET` no Render e faça um novo deploy.
+Esperado: as sessões ficam em memória e são encerradas no reinício. Se isso for um problema, configure Spring Session com Redis ou banco para persistir as sessões.
 
 ### Erro de conexão com o banco
 
@@ -206,8 +195,9 @@ Como front e API estão na mesma origem, o cookie deve funcionar. Verifique:
 
 - está acessando por `https://`, não por IP ou HTTP
 - `COOKIE_SECURE=true`
-- `COOKIE_SAME_SITE=Lax`
+- `COOKIE_SAME_SITE=Strict`
 - o navegador não está bloqueando cookies para o domínio
+- a sessão não expirou por inatividade (`SESSION_TIMEOUT=30m` por padrão)
 
 ### Primeiro acesso muito lento
 

@@ -13,7 +13,8 @@
             type="email" 
             formControlName="email" 
             class="form-control-pill" 
-            placeholder="E-mail" 
+            placeholder="E-mail"
+            autocomplete="username"
           />
         </div>
   
@@ -22,12 +23,13 @@
             type="password" 
             formControlName="password" 
             class="form-control-pill" 
-            placeholder="Palavra-passe" 
+            placeholder="Palavra-passe"
+            autocomplete="current-password"
           />
         </div>
   
-        <button type="submit" [disabled]="loginForm.invalid" class="btn-login-pill">
-          Entrar
+        <button type="submit" [disabled]="loginForm.invalid || isSubmitting" class="btn-login-pill">
+          {{ isSubmitting ? 'A entrar...' : 'Entrar' }}
         </button>
   
       </form>

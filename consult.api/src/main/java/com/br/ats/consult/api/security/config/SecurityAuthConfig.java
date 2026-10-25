@@ -1,6 +1,5 @@
 package com.br.ats.consult.api.security.config;
 
-import com.br.ats.consult.api.security.JwtAuthenticationFilter;
 import com.br.ats.consult.api.security.RestAccessDeniedHandler;
 import com.br.ats.consult.api.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +20,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -38,7 +38,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityAuthConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsService userDetailsService;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
@@ -81,9 +80,16 @@ public class SecurityAuthConfig {
     }
 
     @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .securityContext(context -> context
+                        .securityContextRepository(securityContextRepository()))
                 .csrf(csrf -> {
                     if (!csrfEnabled) {
                         csrf.disable();
@@ -106,6 +112,7 @@ public class SecurityAuthConfig {
                         .requestMatchers(HttpMethod.POST,
                                 "/auth/login", "/api/v1/auth/login",
                                 "/auth/register", "/api/v1/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/auth/me", "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout", "/api/v1/auth/logout").authenticated()
 
                         .requestMatchers("/", "/index.html", "/favicon.ico", "/assets/**",
@@ -145,9 +152,8 @@ public class SecurityAuthConfig {
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .authenticationProvider(authenticationProvider());
 
         return http.build();
     }

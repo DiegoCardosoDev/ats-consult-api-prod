@@ -1,61 +1,88 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, switchMap, tap, throwError } from 'rxjs';
+import { Observable, catchError, finalize, map, of, switchMap, tap, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  role: 'ADMIN' | 'TECH_RECRUITER' | 'USER';
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private apiUrl = `${environment.apiBaseUrl}/auth`;
+  private readonly currentUserState = signal<AuthUser | null>(null);
+
+  readonly currentUser = this.currentUserState.asReadonly();
 
   constructor(
     private http: HttpClient,
     private router: Router
   ) {}
 
-  login(credentials: { email: string; password: string }): Observable<unknown> {
+  login(credentials: { email: string; password: string }): Observable<AuthUser> {
     return this.ensureCsrfToken().pipe(
-      switchMap(() => this.http.post(`${this.apiUrl}/login`, credentials)),
-      tap(() => localStorage.setItem('is_logged', 'true'))
+      switchMap(() => this.http.post<unknown>(`${this.apiUrl}/login`, credentials)),
+      switchMap(() => this.me())
     );
   }
 
-  register(credentials: { email: string; password: string }): Observable<unknown> {
+  register(credentials: { email: string; password: string }): Observable<AuthUser> {
     return this.ensureCsrfToken().pipe(
-      switchMap(() => this.http.post(`${this.apiUrl}/register`, credentials)),
-      tap(() => localStorage.setItem('is_logged', 'true'))
+      switchMap(() => this.http.post<unknown>(`${this.apiUrl}/register`, credentials)),
+      switchMap(() => this.me())
     );
   }
 
-  logout(): void {
-    this.performLogout().subscribe({
-      next: () => this.finishLogout(),
-      error: (error: HttpErrorResponse) => {
-        if (error.status === 401) {
-          this.finishLogout();
-        }
-      }
-    });
+  me(): Observable<AuthUser> {
+    return this.http.get<AuthUser>(`${this.apiUrl}/me`).pipe(
+      tap(user => this.currentUserState.set(user))
+    );
   }
 
-  private performLogout(): Observable<unknown> {
-    return this.ensureCsrfToken().pipe(
-      switchMap(() => this.http.post(`${this.apiUrl}/logout`, {})),
-      catchError((error: HttpErrorResponse) => {
-        if (error.status !== 403) {
-          return throwError(() => error);
-        }
-        return this.ensureCsrfToken().pipe(
-          switchMap(() => this.http.post(`${this.apiUrl}/logout`, {}))
-        );
+  ensureSession(): Observable<boolean> {
+    if (this.currentUserState()) {
+      return of(true);
+    }
+
+    return this.me().pipe(
+      map(() => true),
+      catchError(() => {
+        this.clearSession();
+        return of(false);
       })
     );
   }
 
   isAuthenticated(): boolean {
-    return localStorage.getItem('is_logged') === 'true';
+    return this.currentUserState() !== null;
+  }
+
+  clearSession(): void {
+    this.currentUserState.set(null);
+  }
+
+  logout(): void {
+    this.performLogout()
+      .pipe(finalize(() => this.finishLogout()))
+      .subscribe({ error: () => undefined });
+  }
+
+  private performLogout(): Observable<unknown> {
+    return this.http.post<unknown>(`${this.apiUrl}/logout`, {}).pipe(
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 403) {
+          return this.ensureCsrfToken().pipe(
+            switchMap(() => this.http.post<unknown>(`${this.apiUrl}/logout`, {}))
+          );
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   private ensureCsrfToken(): Observable<void> {
@@ -63,7 +90,9 @@ export class AuthService {
   }
 
   private finishLogout(): void {
-    localStorage.removeItem('is_logged');
-    this.router.navigate(['/login']);
+    this.clearSession();
+    if (this.router.url !== '/login') {
+      this.router.navigate(['/login']);
+    }
   }
 }
