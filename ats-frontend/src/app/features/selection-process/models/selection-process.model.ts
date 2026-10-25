@@ -31,6 +31,7 @@ export interface ResumeModel {
 
 export interface FormAnswerModel {
   questionId: number;
+  questionKey?: string;
   questionPrompt: string;
   answer: string;
   position?: number;
@@ -45,11 +46,32 @@ export interface ApplicationCommentModel {
   createdAt: string;
 }
 
+export interface PrivacyConsentModel {
+  accepted: boolean;
+  acceptedAt?: string;
+  version?: string;
+}
+
+export interface AdherenceCriterionModel {
+  key: string;
+  label: string;
+  percentage: number;
+  weight: number;
+  detail: string;
+}
+
+export interface AdherenceModel {
+  percentage: number;
+  criteria: AdherenceCriterionModel[];
+}
+
 export interface CandidateApplicationModel {
   id: number;
   candidate: CandidateModel;
   resume: ResumeModel;
   status: CandidateApplicationStatus;
+  consent?: PrivacyConsentModel;
+  adherence?: AdherenceModel;
   answers?: FormAnswerModel[];
   comments?: ApplicationCommentModel[];
   appliedAt: string;

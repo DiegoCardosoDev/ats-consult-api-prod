@@ -118,6 +118,21 @@
   white-space: nowrap;
 }
 
+.drawer-section__tag.is-high {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.drawer-section__tag.is-medium {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.drawer-section__tag.is-low {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .contact-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -191,6 +206,118 @@
 .resume-row span {
   color: #94a3b8;
   font-size: .68rem;
+}
+
+.adherence-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: .9rem;
+  padding: .8rem .9rem;
+  border-radius: .7rem;
+  background: #f8fafc;
+}
+
+.adherence-summary__value {
+  min-width: 4.2rem;
+  color: #1d4ed8;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.adherence-summary__value small {
+  margin-left: .1rem;
+  font-size: .9rem;
+}
+
+.adherence-summary__value.is-high,
+.adherence-item__header strong.is-high {
+  color: #15803d;
+}
+
+.adherence-summary__value.is-medium,
+.adherence-item__header strong.is-medium {
+  color: #b45309;
+}
+
+.adherence-summary__value.is-low,
+.adherence-item__header strong.is-low {
+  color: #b91c1c;
+}
+
+.adherence-summary__bar,
+.adherence-item__bar {
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.adherence-summary__bar {
+  height: .7rem;
+}
+
+.adherence-summary__bar span,
+.adherence-item__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #1d4ed8;
+  transition: width .25s ease;
+}
+
+.adherence-summary__bar span.is-high,
+.adherence-item__bar span.is-high {
+  background: #16a34a;
+}
+
+.adherence-summary__bar span.is-medium,
+.adherence-item__bar span.is-medium {
+  background: #d97706;
+}
+
+.adherence-summary__bar span.is-low,
+.adherence-item__bar span.is-low {
+  background: #dc2626;
+}
+
+.adherence-list {
+  display: flex;
+  flex-direction: column;
+  gap: .65rem;
+}
+
+.adherence-item {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+
+.adherence-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.adherence-item__header span {
+  color: #475569;
+  font-size: .74rem;
+  font-weight: 700;
+}
+
+.adherence-item__header strong {
+  font-size: .75rem;
+}
+
+.adherence-item__bar {
+  height: .38rem;
+}
+
+.adherence-item small {
+  color: #94a3b8;
+  font-size: .66rem;
 }
 
 .answer-list {

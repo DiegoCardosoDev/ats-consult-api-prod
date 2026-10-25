@@ -13,6 +13,11 @@ export interface ApplicationFormQuestionModel {
   required: boolean;
   options: string[];
   position?: number;
+  questionKey?: string;
+  technologyCategory?: string;
+  parentTechnologyId?: number;
+  maxSelections?: number;
+  systemGenerated?: boolean;
 }
 
 export interface ApplicationFormModel {

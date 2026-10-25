@@ -5,6 +5,7 @@ import com.br.ats.consult.api.candidate.infrastructure.persistence.entity.Candid
 import com.br.ats.consult.api.candidate.infrastructure.persistence.repository.SpringDataCandidateRepository;
 import com.br.ats.consult.api.client.infrastructure.persistence.repository.SpringDataClientRepository;
 import com.br.ats.consult.api.job.domain.exception.JobPositionNotFoundException;
+import com.br.ats.consult.api.job.domain.port.out.JobPositionGateway;
 import com.br.ats.consult.api.job.infrastructure.persistence.repository.SpringDataJobPositionRepository;
 import com.br.ats.consult.api.selectionprocess.domain.enums.CandidateApplicationStatusEnum;
 import com.br.ats.consult.api.selectionprocess.domain.enums.SelectionProcessStatusEnum;
@@ -23,14 +24,23 @@ import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.mapper
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.repository.SpringDataCandidateApplicationCommentRepository;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.repository.SpringDataCandidateApplicationRepository;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.repository.SpringDataSelectionProcessRepository;
+import com.br.ats.consult.api.technology.domain.model.Technology;
+import com.br.ats.consult.api.technology.domain.port.out.TechnologyGateway;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class SelectionProcessRepositoryAdapter implements SelectionProcessGateway {
@@ -40,7 +50,9 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
     private final SpringDataCandidateApplicationCommentRepository applicationCommentRepository;
     private final SpringDataClientRepository clientRepository;
     private final SpringDataJobPositionRepository jobPositionRepository;
+    private final JobPositionGateway jobPositionGateway;
     private final SpringDataCandidateRepository candidateRepository;
+    private final TechnologyGateway technologyGateway;
     private final SelectionProcessMapper mapper;
     private final CandidateApplicationMapper applicationMapper;
 
@@ -49,7 +61,9 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
                                              SpringDataCandidateApplicationCommentRepository applicationCommentRepository,
                                              SpringDataClientRepository clientRepository,
                                              SpringDataJobPositionRepository jobPositionRepository,
+                                             JobPositionGateway jobPositionGateway,
                                              SpringDataCandidateRepository candidateRepository,
+                                             TechnologyGateway technologyGateway,
                                              SelectionProcessMapper mapper,
                                              CandidateApplicationMapper applicationMapper) {
         this.repository = repository;
@@ -57,7 +71,9 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
         this.applicationCommentRepository = applicationCommentRepository;
         this.clientRepository = clientRepository;
         this.jobPositionRepository = jobPositionRepository;
+        this.jobPositionGateway = jobPositionGateway;
         this.candidateRepository = candidateRepository;
+        this.technologyGateway = technologyGateway;
         this.mapper = mapper;
         this.applicationMapper = applicationMapper;
     }
@@ -76,19 +92,24 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
         entity.setStatus(process.getStatus());
         entity.setOpenedAt(process.getOpenedAt());
 
-        return mapper.toDomain(repository.save(entity));
+        return enrichJobPosition(mapper.toDomain(repository.save(entity)));
     }
 
     @Override
     public Optional<SelectionProcess> findById(Long id) {
-        return repository.findByIdWithDetails(id).map(mapper::toDomain);
+        return repository.findByIdWithDetails(id)
+                .map(mapper::toDomain)
+                .map(this::enrichJobPosition);
     }
 
     @Override
     public Page<SelectionProcess> findAll(Pageable pageable) {
         Page<SelectionProcessEntity> page = repository.findAllWithDetails(pageable);
         return new PageImpl<>(
-                page.getContent().stream().map(mapper::toDomain).toList(),
+                page.getContent().stream()
+                        .map(mapper::toDomain)
+                        .map(this::enrichJobPosition)
+                        .toList(),
                 pageable,
                 page.getTotalElements()
         );
@@ -97,7 +118,17 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
     @Override
     public Optional<SelectionProcess> findOpenByClientIdAndJobPositionId(Long clientId, Long jobPositionId) {
         return repository.findByClientAndJobAndStatus(clientId, jobPositionId, SelectionProcessStatusEnum.OPEN)
-                .map(mapper::toDomain);
+                .map(mapper::toDomain)
+                .map(this::enrichJobPosition);
+    }
+
+    private SelectionProcess enrichJobPosition(SelectionProcess process) {
+        if (process.getJobPosition() == null || process.getJobPosition().getId() == null) {
+            return process;
+        }
+        jobPositionGateway.findById(process.getJobPosition().getId())
+                .ifPresent(process::setJobPosition);
+        return process;
     }
 
     @Override
@@ -118,6 +149,10 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
                         ? CandidateApplicationStatusEnum.TRIAGEM
                         : application.getStatus())
                 .appliedAt(application.getAppliedAt() == null ? Instant.now() : application.getAppliedAt())
+                .consentAccepted(application.isConsentAccepted())
+                .consentAcceptedAt(application.getConsentAcceptedAt())
+                .consentVersion(application.getConsentVersion())
+                .consentIp(application.getConsentIp())
                 .build();
 
         if (application.getAnswers() != null) {
@@ -125,6 +160,7 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
                     CandidateApplicationAnswerEntity.builder()
                             .application(entity)
                             .questionId(answer.questionId())
+                            .questionKey(answer.questionKey())
                             .questionPrompt(answer.questionPrompt())
                             .answer(answer.answer())
                             .position(answer.position() == null ? 0 : answer.position())
@@ -132,20 +168,18 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
             ));
         }
 
-        return applicationMapper.toDomain(applicationRepository.save(entity));
+        return toDomain(applicationRepository.save(entity));
     }
 
     @Override
     public List<CandidateApplication> findApplicationsByProcessId(Long processId) {
-        return applicationRepository.findByProcessIdOrderByAppliedAtDesc(processId).stream()
-                .map(applicationMapper::toDomain)
-                .toList();
+        return toDomainList(applicationRepository.findByProcessIdOrderByAppliedAtDesc(processId));
     }
 
     @Override
     public Optional<CandidateApplication> findApplicationById(Long applicationId) {
         return applicationRepository.findWithDetailsById(applicationId)
-                .map(applicationMapper::toDomain);
+                .map(this::toDomain);
     }
 
     @Override
@@ -154,7 +188,59 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
         CandidateApplicationEntity entity = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new CandidateApplicationNotFoundException(applicationId));
         entity.setStatus(status);
-        return applicationMapper.toDomain(applicationRepository.save(entity));
+        return toDomain(applicationRepository.save(entity));
+    }
+
+    private CandidateApplication toDomain(CandidateApplicationEntity entity) {
+        CandidateApplication application = applicationMapper.toDomain(entity);
+        mapCandidateTechnologies(application, entity, loadTechnologies(List.of(entity)));
+        return application;
+    }
+
+    private List<CandidateApplication> toDomainList(List<CandidateApplicationEntity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Technology> technologiesById = loadTechnologies(entities);
+        return entities.stream()
+                .map(entity -> {
+                    CandidateApplication application = applicationMapper.toDomain(entity);
+                    mapCandidateTechnologies(application, entity, technologiesById);
+                    return application;
+                })
+                .toList();
+    }
+
+    private Map<Long, Technology> loadTechnologies(List<CandidateApplicationEntity> entities) {
+        Set<Long> technologyIds = entities.stream()
+                .map(CandidateApplicationEntity::getCandidate)
+                .filter(Objects::nonNull)
+                .map(CandidateEntity::getTechnologyIds)
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (technologyIds.isEmpty()) {
+            return Map.of();
+        }
+        return technologyGateway.findAllByIds(new ArrayList<>(technologyIds)).stream()
+                .collect(Collectors.toMap(Technology::getId, Function.identity()));
+    }
+
+    private void mapCandidateTechnologies(CandidateApplication application, CandidateApplicationEntity entity,
+                                          Map<Long, Technology> technologiesById) {
+        if (application == null || application.getCandidate() == null
+                || entity == null || entity.getCandidate() == null) {
+            return;
+        }
+        List<Long> technologyIds = entity.getCandidate().getTechnologyIds();
+        List<Technology> technologies = technologyIds == null
+                ? List.of()
+                : technologyIds.stream()
+                .map(technologiesById::get)
+                .filter(Objects::nonNull)
+                .toList();
+        application.getCandidate().setTechnologies(new ArrayList<>(technologies));
     }
 
     @Override

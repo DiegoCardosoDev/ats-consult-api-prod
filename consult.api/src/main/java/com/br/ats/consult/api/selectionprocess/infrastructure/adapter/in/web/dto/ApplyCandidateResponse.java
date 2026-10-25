@@ -10,7 +10,8 @@ public record ApplyCandidateResponse(
     public static ApplyCandidateResponse fromDomain(CandidateApplicationResult result) {
         return new ApplyCandidateResponse(
                 result.selectionProcess().getId(),
-                CandidateApplicationResponse.fromDomain(result.application())
+                CandidateApplicationResponse.fromDomain(result.application(),
+                        result.selectionProcess().getJobPosition())
         );
     }
 }

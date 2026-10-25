@@ -146,6 +146,7 @@ erDiagram
     JOB_POSITION ||--o| APPLICATION_FORM : define
     APPLICATION_FORM ||--o{ APPLICATION_FORM_QUESTION : contem
     JOB_POSITION }o--o{ TECHNOLOGY : usa
+    CANDIDATE }o--o{ TECHNOLOGY : domina
     SELECTION_PROCESS ||--o{ CANDIDATE_APPLICATION : agrupa
     CANDIDATE ||--o{ CANDIDATE_APPLICATION : candidata
     CANDIDATE_APPLICATION ||--o{ CANDIDATE_APPLICATION_ANSWER : responde
@@ -158,7 +159,8 @@ erDiagram
 | Tabela | Descrição |
 | --- | --- |
 | `tb_clients` | Cliente com `name`, `cnpj` único e `code` único |
-| `tb_candidates` | Candidato com e-mail único case-insensitive e endereço embutido |
+| `tb_candidates` | Candidato com e-mail único case-insensitive, endereço embutido e perfil (`education_level`, `english_level`) |
+| `tb_candidate_technologies` | Relação N:N entre candidato e tecnologias dominadas |
 | `tb_technologies` | Catálogo com categoria e hierarquia (`parent_id`) |
 | `tb_job_positions` | Vaga com `client_id` obrigatório, status, modelo, contrato, faixa salarial e localização |
 | `tb_job_position_technologies` | Relação N:N entre vaga e tecnologia |
@@ -166,7 +168,7 @@ erDiagram
 | `tb_candidate_applications` | Candidatura com currículo, `status` Kanban e data de aplicação |
 | `tb_candidate_application_answers` | Respostas do formulário vinculadas à candidatura |
 | `tb_candidate_application_comments` | Comentários com `author_id`, `author_email`, mensagem e data |
-| `tb_application_forms` / `tb_application_form_questions` | Formulário ativo/inativo e perguntas por vaga |
+| `tb_application_forms` / `tb_application_form_questions` | Formulário ativo/inativo e perguntas por vaga, incluindo metadados do template (`question_key`, categoria, tecnologia pai, `max_selections`, `system_generated`) |
 | `tb_users` | Usuários com papel `ADMIN`, `TECH_RECRUITER` ou `USER` |
 
 ### Relacionamentos e restrições relevantes
@@ -177,6 +179,8 @@ erDiagram
 - A candidatura pertence a um processo; o processo pertence a um cliente e a uma vaga.
 - O status da candidatura é `VARCHAR(50)` com `CHECK` para os 8 valores do Kanban.
 - Comentários são removidos em cascata quando a candidatura é removida.
+- `tb_candidate_technologies` usa chave primária composta (`candidate_id`, `technology_id`) e remove vínculos em cascata.
+- Perguntas geradas usam `question_key` para identificar as perguntas padrão de identificação (`FULL_NAME`, `AGE`, `ROLE`, `EMAIL`, `PHONE`), os dados complementares (`LINKEDIN_URL`, `STREET`, `ADDRESS_NUMBER`, `COMPLEMENT`, `NEIGHBORHOOD`, `CITY`, `STATE`, `ZIP_CODE`, `COUNTRY`), a avaliação (`SALARY_EXPECTATION`, `WORK_MODEL`, `EDUCATION_LEVEL`, `ENGLISH_LEVEL`) e as perguntas de tecnologia (`TECH_CATEGORY_<CATEGORIA>` e `TECH_CHILDREN_<parentId>`).
 
 ### Migrações Flyway
 
@@ -191,6 +195,12 @@ erDiagram
 | `V7` | Clientes, candidatos, processos e candidaturas |
 | `V8` | Formulários de candidatura |
 | `V9` | Cliente obrigatório em vagas, status Kanban e comentários |
+| `V10` | Remoção do controle de versão de token de usuário |
+| `V11` | Perfil do candidato, tecnologias do candidato e metadados das perguntas do formulário |
+| `V12` | Catálogo ampliado de linguagens, frameworks e cloud; nova categoria de versionamento |
+| `V13` | Permite `VERSION_CONTROL` nas perguntas de tecnologia do formulário |
+| `V14` | Guarda a chave da pergunta nas respostas para tradução no frontend |
+| `V15` | Consentimento LGPD nas candidaturas (aceite, data/hora, versão e IP) |
 
 > A `V9` faz backfill de vagas antigas: cria `Cliente Padrão` se não existir cliente e associa as vagas sem `client_id` ao primeiro cliente disponível antes de aplicar `NOT NULL`.
 
@@ -202,12 +212,28 @@ erDiagram
 - O cliente é resolvido no caso de uso de criação/atualização e persistido como `@ManyToOne`.
 - A resposta da vaga inclui um resumo do cliente (`id`, `name`, `code`).
 
+### Perfil do candidato
+
+- `educationLevel` e `englishLevel` são opcionais e usam os enums `EducationLevelEnum` e `EnglishLevelEnum`.
+- `technologyIds` referencia tecnologias existentes do catálogo (até 100); IDs inexistentes geram `404 TechnologyNotFoundException`.
+- A resposta do candidato inclui as tecnologias resolvidas (`id`, `name`, `category`, `parentId`).
+- No `PUT /api/v1/candidates/{id}`, os campos de perfil enviados substituem os anteriores; campos de perfil omitidos são limpos.
+- No fluxo de candidatura, o perfil é enriquecido com as respostas de identificação (`FULL_NAME`, `AGE`, `ROLE`, `EMAIL`, `PHONE`), LinkedIn, endereço, formação, inglês e tecnologias, sem duplicar tecnologias.
+
 ### Processo seletivo
 
 - O processo exige `clientId` e `jobPositionId`.
 - O cliente informado no processo deve ser exatamente o cliente da vaga; caso contrário, a operação é rejeitada.
 - Se `status` não for informado, assume `OPEN`. Se `openedAt` não for informado, assume a data atual.
 - Só é possível candidatar-se a um processo com status `OPEN`.
+
+### Aderência do candidato à vaga
+
+- Cada candidatura no processo recebe `adherence`, calculada a partir das respostas do formulário, do perfil do candidato e dos requisitos da vaga.
+- Critérios e pesos: tecnologias (35), pretensão salarial (20), modelo de trabalho (15), formação (15) e inglês (15).
+- Critérios sem requisito na vaga são ignorados e os pesos restantes são normalizados.
+- O resultado contém `percentage` (0–100) e uma lista de `criteria` com `key`, `label`, `percentage`, `weight` e `detail`.
+- A aderência é devolvida na consulta do processo, na candidatura por vaga/processo e no cartão do Kanban; a atualização de status mantém a aderência já carregada no frontend.
 
 ### Candidatura por vaga
 
@@ -217,6 +243,8 @@ erDiagram
 - O cliente da candidatura é sempre herdado da vaga — não há seleção manual de cliente no frontend.
 - O candidato é reutilizado pelo e-mail (normalizado); os dados existentes são atualizados.
 - Não é permitido o mesmo candidato duas vezes no mesmo processo.
+- O envio exige aceite da Política de Privacidade (`consent.accepted=true` e `consent.version`).
+- O servidor registra o aceite, a data/hora, a versão da política e o IP da requisição; o IP não é exposto na API.
 - O currículo é obrigatório, deve ter assinatura `%PDF-`, extensão `.pdf` e respeitar o tamanho máximo configurado.
 - Se o armazenamento do currículo falhar após o salvamento, o arquivo é removido.
 
@@ -224,10 +252,23 @@ erDiagram
 
 - O formulário é procurado pelo `jobPositionId`.
 - Apenas formulários com `active = true` e com perguntas são aplicados.
+- Se a vaga não tiver formulário ativo com perguntas, o template padrão é gerado automaticamente ao abrir a vaga ou ao receber uma candidatura.
 - Perguntas obrigatórias sem resposta geram erro.
 - Em `SINGLE_CHOICE`, a resposta deve pertencer às opções normalizadas da pergunta.
+- Em `MULTIPLE_CHOICE`, as opções são separadas por `;`; todas devem pertencer à pergunta e o total não pode exceder `maxSelections`, quando definido.
 - Respostas vazias opcionais são ignoradas.
-- As respostas armazenam também o enunciado e a posição da pergunta no momento da candidatura.
+- As respostas armazenam também a chave, o enunciado e a posição da pergunta no momento da candidatura.
+- A criação de uma vaga gera automaticamente o formulário do template (identificação, dados complementares, avaliação e perguntas de tecnologias), que pode ser ajustado pelo recrutador ou regenerado.
+- Existe um único formulário por vaga. O candidato preenche a identificação, os dados complementares, a avaliação e as tecnologias no mesmo formulário; o currículo e o consentimento LGPD permanecem etapas separadas.
+- As perguntas essenciais `FULL_NAME`, `AGE`, `ROLE`, `EMAIL` e `PHONE` não podem ser removidas. Se um formulário antigo não as tiver, são acrescentadas automaticamente na consulta, no salvamento e na candidatura, preservando as perguntas personalizadas.
+- Os dados de identificação do candidato são derivados das respostas do formulário; respostas de `STREET`, `ADDRESS_NUMBER`, `COMPLEMENT`, `NEIGHBORHOOD`, `CITY`, `STATE`, `ZIP_CODE` e `COUNTRY` preenchem o endereço.
+- É gerada uma pergunta obrigatória de múltipla escolha por categoria de tecnologia existente no catálogo (por exemplo, linguagens, frameworks, cloud, bancos de dados e DevOps), mesmo que a vaga não exija tecnologias dessa categoria.
+- As perguntas de categoria incluem todas as tecnologias do catálogo na categoria, permitindo selecionar mais de uma linguagem, framework, banco, etc.
+- A opção `Não domino` é adicionada a todas as perguntas de tecnologia e é exclusiva em relação às restantes opções.
+- As perguntas de tecnologia são obrigatórias e não podem ser removidas no editor. Formulários existentes sem as perguntas padrão recebem automaticamente as perguntas em falta na consulta ou no salvamento, tal como acontece com as perguntas essenciais.
+- Respostas de `FULL_NAME`, `AGE`, `ROLE`, `EMAIL`, `PHONE`, `LINKEDIN_URL`, endereço, `EDUCATION_LEVEL`, `ENGLISH_LEVEL` e das perguntas de tecnologia enriquecem o perfil do candidato.
+- Vagas antigas sem formulário recebem o template automaticamente na primeira consulta ou candidatura. Candidaturas antigas que foram registadas sem formulário não são preenchidas retroativamente.
+- O botão **Restaurar padrão** no detalhe da vaga recria o template, preservando o ID do formulário existente.
 
 ### Kanban
 
@@ -320,8 +361,9 @@ Paginação (`PageResponse`): `content`, `page`, `size`, `totalElements`, `total
 | Método | Caminho | Acesso | Observação |
 | --- | --- | --- | --- |
 | POST | `/api/v1/candidates` | `ADMIN`, `TECH_RECRUITER` | Cria ou atualiza por e-mail no fluxo de candidatura |
+| PUT | `/api/v1/candidates/{id}` | `ADMIN`, `TECH_RECRUITER` | Atualiza dados e perfil do candidato |
 | GET | `/api/v1/candidates` | Autenticado | Filtros `name`, `role`; paginação |
-| GET | `/api/v1/candidates/{id}` | Autenticado | |
+| GET | `/api/v1/candidates/{id}` | Autenticado | Inclui `educationLevel`, `englishLevel` e `technologies` |
 
 ### Processos seletivos
 
@@ -330,17 +372,17 @@ Paginação (`PageResponse`): `content`, `page`, `size`, `totalElements`, `total
 | POST | `/api/v1/selection-processes` | `ADMIN`, `TECH_RECRUITER` | `clientId` deve ser o cliente da vaga |
 | GET | `/api/v1/selection-processes` | Autenticado | Paginado; ordenação padrão `openedAt DESC` |
 | GET | `/api/v1/selection-processes/{id}` | Autenticado | Inclui candidaturas, status, respostas e comentários |
-| POST | `/api/v1/selection-processes/{id}/candidates` | `ADMIN`, `TECH_RECRUITER` | `multipart/form-data` |
+| POST | `/api/v1/selection-processes/{id}/candidates` | `ADMIN`, `TECH_RECRUITER` | `multipart/form-data`; exige `consent` |
 
 ### Candidaturas
 
 | Método | Caminho | Acesso | Observação |
 | --- | --- | --- | --- |
-| POST | `/api/v1/job-positions/{jobId}/applications` | `ADMIN`, `TECH_RECRUITER` | Candidatura por vaga; herda o cliente |
+| POST | `/api/v1/job-positions/{jobId}/applications` | `ADMIN`, `TECH_RECRUITER` | Candidatura por vaga; herda o cliente; exige `consent` |
 | GET | `/api/v1/applications/{id}/resume` | Autenticado | Download do PDF |
 | PATCH | `/api/v1/applications/{id}/status` | `ADMIN`, `TECH_RECRUITER` | Move no Kanban |
 | GET | `/api/v1/applications/{id}/comments` | Autenticado | Mais recentes primeiro |
-| POST | `/api/v1/applications/{id}/comments` | Autenticado | Autor vem do token |
+| POST | `/api/v1/applications/{id}/comments` | Autenticado | Autor vem da sessão |
 
 #### Payload de candidatura (`multipart/form-data`)
 
@@ -349,6 +391,7 @@ Paginação (`PageResponse`): `content`, `page`, `size`, `totalElements`, `total
 | `candidate` | JSON (`CandidateRequest`) | Sim |
 | `resume` | Arquivo PDF | Sim |
 | `answers` | JSON (`FormAnswersRequest`) | Não |
+| `consent` | JSON (`PrivacyConsentRequest`) | Sim |
 
 Exemplo de `candidate`:
 
@@ -360,6 +403,9 @@ Exemplo de `candidate`:
   "linkedinUrl": "https://www.linkedin.com/in/maria",
   "email": "maria@example.com",
   "phone": "+351912345678",
+  "educationLevel": "BACHELORS",
+  "englishLevel": "ADVANCED",
+  "technologyIds": [1, 2, 3],
   "address": {
     "street": "Rua A",
     "number": "10",
@@ -383,6 +429,17 @@ Exemplo de `answers`:
   ]
 }
 ```
+
+Exemplo de `consent`:
+
+```json
+{
+  "accepted": true,
+  "version": "1.0"
+}
+```
+
+A resposta da candidatura inclui `application.consent` com `accepted`, `acceptedAt` e `version`.
 
 #### Status Kanban
 
@@ -408,9 +465,12 @@ Content-Type: application/json
 | --- | --- | --- |
 | GET | `/api/v1/job-positions/{jobId}/application-form` | Autenticado |
 | PUT | `/api/v1/job-positions/{jobId}/application-form` | Autenticado |
+| POST | `/api/v1/job-positions/{jobId}/application-form/generate` | `ADMIN`, `TECH_RECRUITER` |
 | DELETE | `/api/v1/job-positions/{jobId}/application-form` | Autenticado |
 
-> O `GET` retorna `204 No Content` quando a vaga não possui formulário.
+> O `GET` devolve o formulário ativo e, quando a vaga não possui formulário ativo com perguntas, gera o template padrão antes de responder. O `POST /generate` recria as perguntas a partir do template da vaga (perguntas padrão + tecnologias) e preserva o ID do formulário existente.
+
+Perguntas geradas expõem os metadados `questionKey`, `technologyCategory`, `parentTechnologyId`, `maxSelections` e `systemGenerated`.
 
 ## 8. Segurança
 
@@ -470,6 +530,15 @@ Fluxo de login:
 - O contador é em memória, por instância; em múltiplas réplicas é necessário um store compartilhado.
 - Respostas excedentes retornam `429 Too Many Requests`.
 
+### LGPD e consentimento
+
+- A candidatura só é aceita com `consent.accepted=true` e `consent.version` preenchido.
+- O backend valida o consentimento antes de guardar candidato, currículo ou candidatura.
+- São registados `consent_accepted`, `consent_accepted_at`, `consent_version` e `consent_ip`; o IP não é devolvido pela API.
+- A resposta da candidatura expõe `application.consent` com `accepted`, `acceptedAt` e `version`.
+- A página pública `/privacidade` apresenta a versão atual da política (`PRIVACY_POLICY_VERSION`).
+- Ao alterar o texto da política, a versão deve ser incrementada no frontend e a redação validada pelo jurídico.
+
 ## 9. Frontend
 
 ### Organização
@@ -480,6 +549,7 @@ Fluxo de login:
 - `csrf.interceptor.ts` obtém o cookie `XSRF-TOKEN` e injeta `X-XSRF-TOKEN` nas requisições mutáveis.
 - `auth.interceptor.ts` adiciona `withCredentials` e limpa a sessão/redireciona em `401`.
 - `auth.guard.ts` valida a sessão no backend via `/auth/me` antes de liberar rotas autenticadas.
+- A rota `/privacidade` é pública para consulta antes do envio da candidatura.
 - Serviços por feature (`job-position.service.ts`, `selection-process.service.ts`, etc.) usam `environment.apiBaseUrl`.
 
 ### Módulo de processos seletivos
@@ -488,9 +558,10 @@ Componentes principais:
 
 - `process-list`: lista e criação de processos; ao escolher a vaga, o cliente é preenchido automaticamente.
 - `process-detail`: carrega o processo, formulário da vaga e candidaturas; integra Kanban e modais.
-- `kanban-board`: quadro com 8 colunas, `cdkDrag`, `cdkDropListGroup`, preview/placeholder e emissão de `statusChanged` e `cardSelected`.
-- `candidate-application-modal`: candidatura em vaga ou processo, upload de PDF e respostas do formulário.
-- `application-detail-modal`: drawer com dados do candidato, currículo, respostas, histórico de comentários e novo comentário.
+- `kanban-board`: quadro com 8 colunas, `cdkDrag`, `cdkDropListGroup`, preview/placeholder, badge de aderência e emissão de `statusChanged` e `cardSelected`.
+- `candidate-application-modal`: candidatura em vaga ou processo num único formulário, com identificação, dados complementares, avaliação e tecnologias; upload de PDF e aceite obrigatório da Política de Privacidade.
+- `application-detail-modal`: drawer com dados do candidato, aderência à vaga, currículo, consentimento LGPD, respostas, histórico de comentários e novo comentário.
+- `privacy-policy`: página pública (`/privacidade`) com a versão 1.0 da Política de Privacidade.
 
 ### Módulo de vagas
 

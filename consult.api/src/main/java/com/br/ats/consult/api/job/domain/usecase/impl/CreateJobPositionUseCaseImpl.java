@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.job.domain.usecase.impl;
 
+import com.br.ats.consult.api.applicationform.domain.usecase.ManageApplicationFormUseCase;
 import com.br.ats.consult.api.client.domain.exception.ClientNotFoundException;
 import com.br.ats.consult.api.client.domain.port.out.ClientGateway;
 import com.br.ats.consult.api.job.domain.enums.JobStatusEnum;
@@ -19,12 +20,15 @@ public class CreateJobPositionUseCaseImpl implements CreateJobPositionUseCase {
     private final TechnologyGateway technologyGateway;
 
     private final ClientGateway clientGateway;
+    private final ManageApplicationFormUseCase applicationFormUseCase;
 
     public CreateJobPositionUseCaseImpl(JobPositionGateway gateway, TechnologyGateway technologyGateway,
-                                        ClientGateway clientGateway) {
+                                        ClientGateway clientGateway,
+                                        ManageApplicationFormUseCase applicationFormUseCase) {
         this.gateway = gateway;
         this.technologyGateway = technologyGateway;
         this.clientGateway = clientGateway;
+        this.applicationFormUseCase = applicationFormUseCase;
     }
 
     @Override
@@ -51,6 +55,8 @@ public class CreateJobPositionUseCaseImpl implements CreateJobPositionUseCase {
             jobPosition.setTechnologies(TechnologyResolver.resolve(technologyGateway, techIds));
         }
 
-        return gateway.save(jobPosition);
+        JobPosition saved = gateway.save(jobPosition);
+        applicationFormUseCase.generateForJob(saved.getId());
+        return saved;
     }
 }

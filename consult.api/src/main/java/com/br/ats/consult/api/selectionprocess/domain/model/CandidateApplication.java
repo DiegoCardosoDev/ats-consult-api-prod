@@ -3,6 +3,7 @@ package com.br.ats.consult.api.selectionprocess.domain.model;
 import com.br.ats.consult.api.applicationform.domain.model.FormAnswer;
 import com.br.ats.consult.api.candidate.domain.model.Candidate;
 import com.br.ats.consult.api.selectionprocess.domain.enums.CandidateApplicationStatusEnum;
+import com.br.ats.consult.api.selectionprocess.domain.exception.PrivacyConsentRequiredException;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -30,6 +31,11 @@ public class CandidateApplication {
     private List<FormAnswer> answers = new ArrayList<>();
     @Builder.Default
     private List<ApplicationComment> comments = new ArrayList<>();
+    @Builder.Default
+    private boolean consentAccepted = false;
+    private Instant consentAcceptedAt;
+    private String consentVersion;
+    private String consentIp;
     private Instant appliedAt;
 
     public void validate() {
@@ -44,6 +50,13 @@ public class CandidateApplication {
         }
         if (status == null) {
             throw new IllegalArgumentException("O estado da candidatura é obrigatório.");
+        }
+        if (!consentAccepted) {
+            throw new PrivacyConsentRequiredException();
+        }
+        if (consentAcceptedAt == null) {
+            throw new PrivacyConsentRequiredException(
+                    "A data de aceitação da Política de Privacidade é obrigatória.");
         }
     }
 }

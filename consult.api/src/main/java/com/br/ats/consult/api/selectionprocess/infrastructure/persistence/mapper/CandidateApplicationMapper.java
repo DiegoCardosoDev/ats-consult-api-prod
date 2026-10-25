@@ -31,6 +31,7 @@ public interface CandidateApplicationMapper {
     default FormAnswer mapAnswer(CandidateApplicationAnswerEntity entity) {
         return new FormAnswer(
                 entity.getQuestionId(),
+                entity.getQuestionKey(),
                 entity.getQuestionPrompt(),
                 entity.getAnswer(),
                 entity.getPosition()

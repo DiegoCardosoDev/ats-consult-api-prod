@@ -68,6 +68,11 @@ public class ApplicationFormRepositoryAdapter implements ApplicationFormGateway 
                     .type(question.getType())
                     .required(question.isRequired())
                     .position(question.getPosition() == null ? index : question.getPosition())
+                    .questionKey(question.getQuestionKey())
+                    .technologyCategory(question.getTechnologyCategory())
+                    .parentTechnologyId(question.getParentTechnologyId())
+                    .maxSelections(question.getMaxSelections())
+                    .systemGenerated(question.isSystemGenerated())
                     .options(new ArrayList<>(question.normalizedOptions()))
                     .build());
         }
@@ -84,6 +89,11 @@ public class ApplicationFormRepositoryAdapter implements ApplicationFormGateway 
                         .type(question.getType())
                         .required(question.isRequired())
                         .position(question.getPosition())
+                        .questionKey(question.getQuestionKey())
+                        .technologyCategory(question.getTechnologyCategory())
+                        .parentTechnologyId(question.getParentTechnologyId())
+                        .maxSelections(question.getMaxSelections())
+                        .systemGenerated(question.isSystemGenerated())
                         .options(question.getOptions() == null ? new ArrayList<>() : new ArrayList<>(question.getOptions()))
                         .build())
                 .toList();

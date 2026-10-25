@@ -29,6 +29,10 @@ export class CandidateService {
     return this.http.post<CandidateModel>(this.apiUrl, candidate);
   }
 
+  update(id: number, candidate: CandidateModel): Observable<CandidateModel> {
+    return this.http.put<CandidateModel>(`${this.apiUrl}/${id}`, candidate);
+  }
+
   findById(id: number): Observable<CandidateModel> {
     return this.http.get<CandidateModel>(`${this.apiUrl}/${id}`);
   }

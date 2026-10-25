@@ -75,6 +75,68 @@
         </div>
       </section>
 
+      @if (application.consent?.accepted) {
+        <section class="drawer-section">
+          <div class="drawer-section__heading">
+            <h6><i class="bi bi-shield-check"></i> Privacidade e LGPD</h6>
+          </div>
+          <div class="answer-item">
+            <span>Consentimento para tratamento dos dados</span>
+            <strong>
+              Aceite em
+              @if (application.consent?.acceptedAt) {
+                {{ application.consent?.acceptedAt | date:'dd/MM/yyyy HH:mm' }}
+              } @else {
+                data não registada
+              }
+              @if (application.consent?.version) {
+                · Política v{{ application.consent?.version }}
+              }
+            </strong>
+          </div>
+          <a href="/privacidade" target="_blank" rel="noopener" class="small">
+            Consultar Política de Privacidade
+          </a>
+        </section>
+      }
+
+      @if (application.adherence) {
+        <section class="drawer-section">
+          <div class="drawer-section__heading">
+            <h6><i class="bi bi-bullseye"></i> Aderência à vaga</h6>
+            <span class="drawer-section__tag" [ngClass]="scoreClass(application.adherence.percentage)">
+              {{ application.adherence.percentage }}% · {{ scoreLabel(application.adherence.percentage) }}
+            </span>
+          </div>
+
+          <div class="adherence-summary">
+            <div class="adherence-summary__value" [ngClass]="scoreClass(application.adherence.percentage)">
+              {{ application.adherence.percentage }}<small>%</small>
+            </div>
+            <div class="adherence-summary__bar">
+              <span [style.width.%]="application.adherence.percentage"
+                    [ngClass]="scoreClass(application.adherence.percentage)"></span>
+            </div>
+          </div>
+
+          <div class="adherence-list">
+            @for (criterion of application.adherence.criteria; track criterion.key) {
+              <div class="adherence-item">
+                <div class="adherence-item__header">
+                  <span>{{ criterion.label }}</span>
+                  <strong [ngClass]="scoreClass(criterion.percentage)">{{ criterion.percentage }}%</strong>
+                </div>
+                <div class="adherence-item__bar">
+                  <span [style.width.%]="criterion.percentage"
+                        [ngClass]="scoreClass(criterion.percentage)"></span>
+                </div>
+                <small>{{ criterion.detail }}</small>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
       @if (application.answers && application.answers.length > 0) {
         <section class="drawer-section">
           <div class="drawer-section__heading">
@@ -84,7 +146,7 @@
             @for (answer of application.answers; track answer.questionId) {
               <div class="answer-item">
                 <span>{{ answer.questionPrompt }}</span>
-                <strong>{{ answer.answer }}</strong>
+                <strong>{{ answerLabel(answer) }}</strong>
               </div>
             }
           </div>

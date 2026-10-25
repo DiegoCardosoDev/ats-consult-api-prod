@@ -1,5 +1,7 @@
 package com.br.ats.consult.api.candidate.infrastructure.adapter.in.web.dto;
 
+import com.br.ats.consult.api.job.domain.enums.EducationLevelEnum;
+import com.br.ats.consult.api.job.domain.enums.EnglishLevelEnum;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
@@ -8,6 +10,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
+import java.util.List;
 
 public record CandidateRequest(
         @NotBlank(message = "O nome do candidato é obrigatório")
@@ -31,6 +35,10 @@ public record CandidateRequest(
         @Size(min = 8, max = 30, message = "O telefone deve ter entre 8 e 30 caracteres")
         @Pattern(regexp = "^[0-9+()\\-\\s]+$", message = "O telefone contém caracteres inválidos")
         String phone,
+        EducationLevelEnum educationLevel,
+        EnglishLevelEnum englishLevel,
+        @Size(max = 100, message = "O candidato não pode ter mais de 100 tecnologias")
+        List<@Min(value = 1, message = "O identificador da tecnologia deve ser positivo") Long> technologyIds,
         @Valid
         CandidateAddressRequest address
 ) {

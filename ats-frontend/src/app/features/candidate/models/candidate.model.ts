@@ -9,6 +9,8 @@ export interface CandidateAddressModel {
   country?: string;
 }
 
+import { TechnologyModel } from '../../technology/models/technology.model';
+
 export interface CandidateModel {
   id?: number;
   name: string;
@@ -17,5 +19,9 @@ export interface CandidateModel {
   linkedinUrl?: string;
   email: string;
   phone: string;
+  educationLevel?: string;
+  englishLevel?: string;
+  technologyIds?: number[];
+  technologies?: TechnologyModel[];
   address?: CandidateAddressModel;
 }

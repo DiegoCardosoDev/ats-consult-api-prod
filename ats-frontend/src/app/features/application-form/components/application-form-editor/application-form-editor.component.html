@@ -57,16 +57,46 @@
 
             <section class="form-section">
               <div class="section-heading">
-                <h6>Perguntas</h6>
-                <span class="section-tag">{{ questions.length }} pergunta(s)</span>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <h6 class="mb-0">Perguntas</h6>
+                  <span class="section-tag">{{ questions.length }} pergunta(s)</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                        (click)="regenerate()" [disabled]="isRegenerating">
+                  @if (isRegenerating) {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                  } @else {
+                    <i class="bi bi-arrow-repeat me-1"></i>
+                  }
+                  Regenerar modelo
+                </button>
               </div>
+
+              <p class="text-muted small mb-3">
+                As perguntas essenciais de identificação (nome, idade, cargo, e-mail e telefone) e as perguntas
+                padrão de tecnologias não podem ser removidas. Pode ajustar os enunciados e adicionar perguntas
+                específicas da vaga.
+              </p>
 
               <div formArrayName="questions">
                 @for (group of questionGroups; track group; let i = $index) {
                   <div class="question-card" [formGroupName]="i">
                     <div class="question-card__header">
                       <span class="question-card__number">{{ i + 1 }}</span>
-                      <span class="question-card__type">{{ typeOf(i) }}</span>
+                      <span class="question-card__type">{{ typeLabel(i) }}</span>
+                      @if (group.get('systemGenerated')?.value) {
+                        <span class="badge bg-info-subtle text-info-emphasis rounded-pill">Pergunta do modelo</span>
+                      }
+                      @if (group.get('technologyCategory')?.value) {
+                        <span class="badge bg-primary-subtle text-primary rounded-pill">
+                          {{ categoryLabel(group.get('technologyCategory')?.value) }}
+                        </span>
+                      }
+                      @if (group.get('parentTechnologyId')?.value) {
+                        <span class="badge bg-success-subtle text-success-emphasis rounded-pill">
+                          Filhos de {{ parentTechnologyName(group.get('parentTechnologyId')?.value) }}
+                        </span>
+                      }
                       <div class="question-card__actions">
                         <button type="button" class="btn btn-sm btn-outline-secondary" title="Subir"
                                 (click)="moveQuestion(i, -1)" [disabled]="i === 0">
@@ -76,10 +106,12 @@
                                 (click)="moveQuestion(i, 1)" [disabled]="i === questions.length - 1">
                           <i class="bi bi-arrow-down"></i>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger" title="Remover"
-                                (click)="removeQuestion(i)">
-                          <i class="bi bi-trash"></i>
-                        </button>
+                        @if (!isProtectedQuestion(group.get('questionKey')?.value)) {
+                          <button type="button" class="btn btn-sm btn-outline-danger" title="Remover"
+                                  (click)="removeQuestion(i)">
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        }
                       </div>
                     </div>
 
@@ -102,18 +134,36 @@
                       </div>
 
                       @if (isChoiceType(typeOf(i))) {
-                        <div class="col-12">
+                        <div class="col-md-9">
                           <label class="form-label">Opções <span class="required">*</span></label>
                           <input type="text" class="form-control" formControlName="optionsText"
                                  placeholder="Separe as opções por vírgula. Ex.: Sim, Não, Talvez">
                           <div class="form-text">Mínimo de duas opções.</div>
+                        </div>
+                        @if (isMultipleChoice(typeOf(i))) {
+                          <div class="col-md-3">
+                            <label class="form-label">Máx. seleções</label>
+                            <input type="number" class="form-control" min="1" formControlName="maxSelections"
+                                   placeholder="Sem limite">
+                            <div class="form-text">Opcional.</div>
+                          </div>
+                        }
+                      }
+
+                      @if (group.get('technologyCategory')?.value) {
+                        <div class="col-12">
+                          <div class="alert alert-light border small mb-0">
+                            Pergunta gerada a partir do catálogo de tecnologias. As opções correspondem às
+                            tecnologias da categoria e podem ser ajustadas pelo recrutador.
+                          </div>
                         </div>
                       }
 
                       <div class="col-12">
                         <div class="form-check">
                           <input class="form-check-input" type="checkbox" [id]="'required-' + i"
-                                 formControlName="required">
+                                 formControlName="required"
+                                 [disabled]="isProtectedQuestion(group.get('questionKey')?.value)">
                           <label class="form-check-label" [for]="'required-' + i">
                             Resposta obrigatória
                           </label>

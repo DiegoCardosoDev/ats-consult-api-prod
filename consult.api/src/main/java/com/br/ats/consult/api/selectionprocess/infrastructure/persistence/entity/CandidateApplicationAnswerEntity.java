@@ -35,6 +35,9 @@ public class CandidateApplicationAnswerEntity {
     @Column(name = "question_id")
     private Long questionId;
 
+    @Column(name = "question_key", length = 100)
+    private String questionKey;
+
     @Column(name = "question_prompt", nullable = false, length = 500)
     private String questionPrompt;
 

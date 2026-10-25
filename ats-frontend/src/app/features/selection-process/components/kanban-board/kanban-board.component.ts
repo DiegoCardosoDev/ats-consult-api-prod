@@ -101,6 +101,13 @@ export class KanbanBoardComponent {
     return this.applications.filter(application => application.status === status);
   }
 
+  adherenceClass(percentage: number): string {
+    if (percentage >= 75) {
+      return 'is-high';
+    }
+    return percentage >= 50 ? 'is-medium' : 'is-low';
+  }
+
   drop(event: CdkDragDrop<CandidateApplicationModel[]>): void {
     const status = event.container.id as CandidateApplicationStatus;
     const application = event.item.data as CandidateApplicationModel | undefined;

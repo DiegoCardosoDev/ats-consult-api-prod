@@ -20,6 +20,10 @@ export class ApplicationFormService {
     return this.http.put<ApplicationFormModel>(this.url(jobId), form);
   }
 
+  generate(jobId: number): Observable<ApplicationFormModel> {
+    return this.http.post<ApplicationFormModel>(`${this.url(jobId)}/generate`, {});
+  }
+
   delete(jobId: number): Observable<void> {
     return this.http.delete<void>(this.url(jobId));
   }

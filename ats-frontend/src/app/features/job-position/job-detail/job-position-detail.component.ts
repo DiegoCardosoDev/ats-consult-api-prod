@@ -152,17 +152,25 @@ export class JobPositionDetailComponent implements OnInit {
     this.showFormEditor = false;
   }
 
-  removeApplicationForm(): void {
+  restoreDefaultApplicationForm(): void {
     if (!this.job?.id) {
       return;
     }
-    if (!confirm('Remover o formulário de candidatura desta vaga?')) {
+    if (!confirm('Restaurar o formulário padrão desta vaga? As perguntas atuais serão substituídas.')) {
       return;
     }
-    this.applicationFormService.delete(this.job.id).subscribe({
-      next: () => this.applicationForm = undefined,
-      error: (error) => this.formErrorMessage = extractApiErrorMessage(
-        error, 'Não foi possível remover o formulário da vaga.')
+    this.isLoadingForm = true;
+    this.formErrorMessage = '';
+    this.applicationFormService.generate(this.job.id).subscribe({
+      next: (form) => {
+        this.applicationForm = form;
+        this.isLoadingForm = false;
+      },
+      error: (error) => {
+        this.isLoadingForm = false;
+        this.formErrorMessage = extractApiErrorMessage(
+          error, 'Não foi possível restaurar o formulário padrão da vaga.');
+      }
     });
   }
 

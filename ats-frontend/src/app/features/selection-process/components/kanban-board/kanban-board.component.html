@@ -39,12 +39,22 @@
                   <span>{{ application.candidate.role }}</span>
                 </div>
               </div>
-              @if (commentCount(application) > 0) {
-                <span class="kanban-card__comments" [title]="commentCount(application) + ' comentário(s)'">
-                  <i class="bi bi-chat-dots-fill"></i>
-                  {{ commentCount(application) }}
-                </span>
-              }
+              <div class="kanban-card__badges">
+                @if (application.adherence) {
+                  <span class="kanban-card__adherence"
+                        [ngClass]="adherenceClass(application.adherence.percentage)"
+                        [title]="'Aderência à vaga: ' + application.adherence.percentage + '%'">
+                    <i class="bi bi-bullseye"></i>
+                    {{ application.adherence.percentage }}%
+                  </span>
+                }
+                @if (commentCount(application) > 0) {
+                  <span class="kanban-card__comments" [title]="commentCount(application) + ' comentário(s)'">
+                    <i class="bi bi-chat-dots-fill"></i>
+                    {{ commentCount(application) }}
+                  </span>
+                }
+              </div>
             </div>
 
             <div class="kanban-card__meta">

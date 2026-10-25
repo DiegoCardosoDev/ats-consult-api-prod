@@ -1,6 +1,7 @@
 package com.br.ats.consult.api.applicationform.domain.model;
 
 import com.br.ats.consult.api.applicationform.domain.enums.QuestionTypeEnum;
+import com.br.ats.consult.api.technology.domain.model.TechnologyCategoryEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,6 +26,12 @@ public class ApplicationFormQuestion {
     @Builder.Default
     private List<String> options = new ArrayList<>();
     private Integer position;
+    private String questionKey;
+    private TechnologyCategoryEnum technologyCategory;
+    private Long parentTechnologyId;
+    private Integer maxSelections;
+    @Builder.Default
+    private boolean systemGenerated = false;
 
     public void validate() {
         if (prompt == null || prompt.isBlank()) {
@@ -36,9 +43,23 @@ public class ApplicationFormQuestion {
         if (type == null) {
             throw new IllegalArgumentException("O tipo da pergunta é obrigatório.");
         }
+        long validOptions = options == null
+                ? 0
+                : options.stream().filter(option -> option != null && !option.isBlank()).count();
         if ((type == QuestionTypeEnum.SINGLE_CHOICE || type == QuestionTypeEnum.MULTIPLE_CHOICE)
-                && (options == null || options.stream().filter(option -> option != null && !option.isBlank()).count() < 2)) {
+                && validOptions < 2) {
             throw new IllegalArgumentException("Perguntas de escolha precisam de pelo menos duas opções.");
+        }
+        if (maxSelections != null) {
+            if (type != QuestionTypeEnum.MULTIPLE_CHOICE) {
+                throw new IllegalArgumentException("O limite de seleções só se aplica a perguntas de múltipla escolha.");
+            }
+            if (maxSelections < 1) {
+                throw new IllegalArgumentException("O limite de seleções deve ser pelo menos 1.");
+            }
+            if (maxSelections > validOptions) {
+                throw new IllegalArgumentException("O limite de seleções não pode exceder o número de opções.");
+            }
         }
     }
 

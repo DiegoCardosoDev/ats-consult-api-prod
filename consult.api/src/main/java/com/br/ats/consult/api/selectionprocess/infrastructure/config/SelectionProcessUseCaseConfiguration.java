@@ -1,6 +1,6 @@
 package com.br.ats.consult.api.selectionprocess.infrastructure.config;
 
-import com.br.ats.consult.api.applicationform.domain.port.out.ApplicationFormGateway;
+import com.br.ats.consult.api.applicationform.domain.usecase.ManageApplicationFormUseCase;
 import com.br.ats.consult.api.candidate.domain.port.out.CandidateGateway;
 import com.br.ats.consult.api.client.domain.port.out.ClientGateway;
 import com.br.ats.consult.api.job.domain.port.out.JobPositionGateway;
@@ -16,6 +16,7 @@ import com.br.ats.consult.api.selectionprocess.domain.usecase.impl.CreateSelecti
 import com.br.ats.consult.api.selectionprocess.domain.usecase.impl.FindSelectionProcessUseCaseImpl;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.impl.ManageApplicationCommentUseCaseImpl;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.impl.UpdateApplicationStatusUseCaseImpl;
+import com.br.ats.consult.api.technology.domain.port.out.TechnologyGateway;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -48,9 +49,10 @@ public class SelectionProcessUseCaseConfiguration {
     public ApplyCandidateUseCase applyCandidateUseCase(SelectionProcessGateway processGateway,
                                                        CandidateGateway candidateGateway,
                                                        JobPositionGateway jobPositionGateway,
-                                                       ApplicationFormGateway applicationFormGateway,
-                                                       ResumeStorage resumeStorage) {
+                                                       ManageApplicationFormUseCase applicationFormUseCase,
+                                                       ResumeStorage resumeStorage,
+                                                       TechnologyGateway technologyGateway) {
         return new ApplyCandidateUseCaseImpl(processGateway, candidateGateway,
-                jobPositionGateway, applicationFormGateway, resumeStorage);
+                jobPositionGateway, applicationFormUseCase, resumeStorage, technologyGateway);
     }
 }

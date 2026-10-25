@@ -25,7 +25,8 @@ public record SelectionProcessResponse(
                 process.getStatus(),
                 process.getOpenedAt(),
                 applications == null ? List.of() : applications.stream()
-                        .map(CandidateApplicationResponse::fromDomain)
+                        .map(application -> CandidateApplicationResponse.fromDomain(application,
+                                process.getJobPosition()))
                         .toList()
         );
     }

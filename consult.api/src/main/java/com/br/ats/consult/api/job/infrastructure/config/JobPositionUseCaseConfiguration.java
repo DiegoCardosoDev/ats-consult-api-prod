@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.job.infrastructure.config;
 
+import com.br.ats.consult.api.applicationform.domain.usecase.ManageApplicationFormUseCase;
 import com.br.ats.consult.api.client.domain.port.out.ClientGateway;
 import com.br.ats.consult.api.job.domain.port.out.JobPositionGateway;
 import com.br.ats.consult.api.job.domain.usecase.CreateJobPositionUseCase;
@@ -20,8 +21,10 @@ public class JobPositionUseCaseConfiguration {
     @Bean
     public CreateJobPositionUseCase createJobPositionUseCase(JobPositionGateway gateway,
                                                              TechnologyGateway technologyGateway,
-                                                             ClientGateway clientGateway) {
-        return new CreateJobPositionUseCaseImpl(gateway, technologyGateway, clientGateway);
+                                                             ClientGateway clientGateway,
+                                                             ManageApplicationFormUseCase applicationFormUseCase) {
+        return new CreateJobPositionUseCaseImpl(gateway, technologyGateway, clientGateway,
+                applicationFormUseCase);
     }
 
     @Bean

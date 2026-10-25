@@ -4,6 +4,13 @@ import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } fr
 import { ApplicationFormModel, QuestionType } from '../../models/application-form.model';
 import { ApplicationFormService } from '../../services/application-form.service';
 import { extractApiErrorMessage } from '../../../../core/utils/api-error.util';
+import { TechnologyService } from '../../../technology/services/technology.service';
+import { TechnologyModel } from '../../../technology/models/technology.model';
+import {
+  formOptionsFromText,
+  formOptionsText,
+  technologyCategoryLabel
+} from '../../../technology/technology-category.util';
 
 interface QuestionTypeOption {
   value: QuestionType;
@@ -25,11 +32,14 @@ export class ApplicationFormEditorComponent implements OnInit {
 
   private fb = inject(FormBuilder);
   private formService = inject(ApplicationFormService);
+  private technologyService = inject(TechnologyService);
 
   isLoading = false;
   isSaving = false;
+  isRegenerating = false;
   errorMessage = '';
   successMessage = '';
+  technologies: TechnologyModel[] = [];
 
   readonly questionTypes: QuestionTypeOption[] = [
     { value: 'TEXT', label: 'Texto curto' },
@@ -48,6 +58,7 @@ export class ApplicationFormEditorComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadTechnologies();
     this.isLoading = true;
     this.formService.findByJob(this.jobId).subscribe({
       next: (existing) => {
@@ -74,17 +85,46 @@ export class ApplicationFormEditorComponent implements OnInit {
     return this.questions.controls as FormGroup[];
   }
 
+  loadTechnologies(): void {
+    this.technologyService.findAll().subscribe({
+      next: (technologies) => this.technologies = technologies,
+      error: () => this.technologies = []
+    });
+  }
+
   addQuestion(type: QuestionType = 'TEXT'): void {
     this.questions.push(this.fb.group({
       prompt: ['', [Validators.required, Validators.maxLength(500)]],
       type: [type, [Validators.required]],
       required: [false],
-      optionsText: ['']
+      optionsText: [''],
+      questionKey: [null],
+      technologyCategory: [null],
+      parentTechnologyId: [null],
+      maxSelections: [null],
+      systemGenerated: [false]
     }));
   }
 
   removeQuestion(index: number): void {
+    const questionKey = this.questions.at(index)?.get('questionKey')?.value as string | null;
+    if (this.isProtectedQuestion(questionKey)) {
+      return;
+    }
     this.questions.removeAt(index);
+  }
+
+  isCoreQuestion(questionKey?: string | null): boolean {
+    return !!questionKey && ['FULL_NAME', 'AGE', 'ROLE', 'EMAIL', 'PHONE'].includes(questionKey);
+  }
+
+  isTechnologyQuestion(questionKey?: string | null): boolean {
+    return !!questionKey
+      && (questionKey.startsWith('TECH_CATEGORY_') || questionKey.startsWith('TECH_CHILDREN_'));
+  }
+
+  isProtectedQuestion(questionKey?: string | null): boolean {
+    return this.isCoreQuestion(questionKey) || this.isTechnologyQuestion(questionKey);
   }
 
   moveQuestion(index: number, delta: number): void {
@@ -101,8 +141,47 @@ export class ApplicationFormEditorComponent implements OnInit {
     return type === 'SINGLE_CHOICE' || type === 'MULTIPLE_CHOICE';
   }
 
+  isMultipleChoice(type: QuestionType): boolean {
+    return type === 'MULTIPLE_CHOICE';
+  }
+
+  categoryLabel(category?: string): string {
+    return technologyCategoryLabel(category);
+  }
+
+  parentTechnologyName(parentId?: number): string {
+    if (parentId == null) {
+      return '';
+    }
+    return this.technologies.find(technology => technology.id === parentId)?.name ?? `#${parentId}`;
+  }
+
+  regenerate(): void {
+    if (!confirm('Regenerar o formulário com o modelo padrão? As perguntas atuais serão substituídas.')) {
+      return;
+    }
+    this.isRegenerating = true;
+    this.errorMessage = '';
+    this.formService.generate(this.jobId).subscribe({
+      next: (generated) => {
+        this.isRegenerating = false;
+        this.populate(generated);
+        this.successMessage = 'Formulário regenerado com o modelo padrão.';
+      },
+      error: (error) => {
+        this.isRegenerating = false;
+        this.errorMessage = extractApiErrorMessage(error, 'Não foi possível regenerar o formulário.');
+      }
+    });
+  }
+
   typeOf(index: number): QuestionType {
     return this.questionGroups[index]?.get('type')?.value as QuestionType;
+  }
+
+  typeLabel(index: number): string {
+    const type = this.typeOf(index);
+    return this.questionTypes.find(option => option.value === type)?.label ?? type;
   }
 
   close(): void {
@@ -125,7 +204,8 @@ export class ApplicationFormEditorComponent implements OnInit {
     for (const question of this.questionGroups) {
       const type = question.get('type')?.value as QuestionType;
       if (this.isChoiceType(type)) {
-        const options = this.parseOptions(question.get('optionsText')?.value);
+        const questionKey = question.get('questionKey')?.value as string | null | undefined;
+        const options = formOptionsFromText(questionKey, question.get('optionsText')?.value);
         if (options.length < 2) {
           this.errorMessage = 'Perguntas de escolha precisam de pelo menos duas opções.';
           return;
@@ -140,12 +220,22 @@ export class ApplicationFormEditorComponent implements OnInit {
       active: this.form.get('active')?.value ?? true,
       questions: this.questionGroups.map((question, index) => {
         const type = question.get('type')?.value as QuestionType;
+        const questionKey = question.get('questionKey')?.value as string | null | undefined;
         return {
           prompt: question.get('prompt')?.value ?? '',
           type,
           required: question.get('required')?.value ?? false,
-          options: this.isChoiceType(type) ? this.parseOptions(question.get('optionsText')?.value) : [],
-          position: index
+          options: this.isChoiceType(type)
+            ? formOptionsFromText(questionKey, question.get('optionsText')?.value)
+            : [],
+          position: index,
+          questionKey: question.get('questionKey')?.value || undefined,
+          technologyCategory: question.get('technologyCategory')?.value || undefined,
+          parentTechnologyId: question.get('parentTechnologyId')?.value ?? undefined,
+          maxSelections: this.isMultipleChoice(type)
+            ? question.get('maxSelections')?.value ?? undefined
+            : undefined,
+          systemGenerated: question.get('systemGenerated')?.value ?? false
         };
       })
     };
@@ -183,15 +273,14 @@ export class ApplicationFormEditorComponent implements OnInit {
         prompt: [question.prompt, [Validators.required, Validators.maxLength(500)]],
         type: [question.type, [Validators.required]],
         required: [question.required],
-        optionsText: [(question.options ?? []).join(', ')]
+        optionsText: [formOptionsText(question.questionKey, question.options)],
+        questionKey: [question.questionKey ?? null],
+        technologyCategory: [question.technologyCategory ?? null],
+        parentTechnologyId: [question.parentTechnologyId ?? null],
+        maxSelections: [question.maxSelections ?? null],
+        systemGenerated: [question.systemGenerated ?? false]
       }));
     }
   }
 
-  private parseOptions(value: string | null | undefined): string[] {
-    if (!value) {
-      return [];
-    }
-    return value.split(',').map(option => option.trim()).filter(option => option.length > 0);
-  }
 }

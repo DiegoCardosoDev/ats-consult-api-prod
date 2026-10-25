@@ -4,14 +4,17 @@ import com.br.ats.consult.api.candidate.domain.exception.CandidateEmailAlreadyEx
 import com.br.ats.consult.api.candidate.domain.model.Candidate;
 import com.br.ats.consult.api.candidate.domain.port.out.CandidateGateway;
 import com.br.ats.consult.api.candidate.domain.usecase.CreateCandidateUseCase;
+import com.br.ats.consult.api.technology.domain.port.out.TechnologyGateway;
 import org.springframework.transaction.annotation.Transactional;
 
 public class CreateCandidateUseCaseImpl implements CreateCandidateUseCase {
 
     private final CandidateGateway gateway;
+    private final TechnologyGateway technologyGateway;
 
-    public CreateCandidateUseCaseImpl(CandidateGateway gateway) {
+    public CreateCandidateUseCaseImpl(CandidateGateway gateway, TechnologyGateway technologyGateway) {
         this.gateway = gateway;
+        this.technologyGateway = technologyGateway;
     }
 
     @Override
@@ -19,6 +22,8 @@ public class CreateCandidateUseCaseImpl implements CreateCandidateUseCase {
     public Candidate execute(Candidate candidate) {
         candidate.normalize();
         candidate.validate();
+        candidate.setTechnologies(
+                CandidateTechnologyResolver.resolve(technologyGateway, candidate.getTechnologies()));
 
         if (gateway.existsByEmail(candidate.getEmail())) {
             throw new CandidateEmailAlreadyExistsException(candidate.getEmail());

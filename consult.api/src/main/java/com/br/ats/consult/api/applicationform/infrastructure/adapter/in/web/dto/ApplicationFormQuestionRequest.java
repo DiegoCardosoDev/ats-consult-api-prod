@@ -1,6 +1,7 @@
 package com.br.ats.consult.api.applicationform.infrastructure.adapter.in.web.dto;
 
 import com.br.ats.consult.api.applicationform.domain.enums.QuestionTypeEnum;
+import com.br.ats.consult.api.technology.domain.model.TechnologyCategoryEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -16,6 +17,12 @@ public record ApplicationFormQuestionRequest(
         boolean required,
         @Size(max = 30, message = "A pergunta não pode ter mais de 30 opções")
         List<@Size(max = 255, message = "A opção não pode exceder 255 caracteres") String> options,
-        Integer position
+        Integer position,
+        @Size(max = 100, message = "A chave da pergunta não pode exceder 100 caracteres")
+        String questionKey,
+        TechnologyCategoryEnum technologyCategory,
+        Long parentTechnologyId,
+        Integer maxSelections,
+        Boolean systemGenerated
 ) {
 }

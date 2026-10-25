@@ -1,4 +1,31 @@
 /* Global ATS layout helpers shared by the feature screens. */
+.modal-content {
+  color: #1e293b;
+}
+
+.modal-content .form-check-label {
+  color: #1e293b;
+}
+
+.modal-dialog-scrollable .modal-content > form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.modal-dialog-scrollable .modal-content > form > .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal-dialog-scrollable .modal-content > form > .modal-footer {
+  flex-shrink: 0;
+}
+
 .page-layout {
   background: linear-gradient(135deg, #0f172a, #1e293b);
 }

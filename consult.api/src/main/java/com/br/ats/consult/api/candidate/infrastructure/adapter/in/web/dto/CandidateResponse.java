@@ -1,6 +1,10 @@
 package com.br.ats.consult.api.candidate.infrastructure.adapter.in.web.dto;
 
 import com.br.ats.consult.api.candidate.domain.model.Candidate;
+import com.br.ats.consult.api.job.domain.enums.EducationLevelEnum;
+import com.br.ats.consult.api.job.domain.enums.EnglishLevelEnum;
+
+import java.util.List;
 
 public record CandidateResponse(
         Long id,
@@ -10,6 +14,9 @@ public record CandidateResponse(
         String linkedinUrl,
         String email,
         String phone,
+        EducationLevelEnum educationLevel,
+        EnglishLevelEnum englishLevel,
+        List<CandidateTechnologyResponse> technologies,
         CandidateAddressResponse address
 ) {
 
@@ -25,6 +32,13 @@ public record CandidateResponse(
                 domain.getLinkedinUrl(),
                 domain.getEmail(),
                 domain.getPhone(),
+                domain.getEducationLevel(),
+                domain.getEnglishLevel(),
+                domain.getTechnologies() == null
+                        ? List.of()
+                        : domain.getTechnologies().stream()
+                        .map(CandidateTechnologyResponse::fromDomain)
+                        .toList(),
                 CandidateAddressResponse.fromDomain(domain.getAddress())
         );
     }

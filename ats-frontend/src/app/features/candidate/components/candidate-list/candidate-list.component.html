@@ -98,8 +98,33 @@
                       }
                     </div>
                   }
+                  @if (candidate.educationLevel || candidate.englishLevel || (candidate.technologies?.length ?? 0) > 0) {
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                      @if (candidate.educationLevel) {
+                        <span class="badge bg-info-subtle text-info-emphasis rounded-pill px-3 py-1">
+                          {{ educationLabel(candidate.educationLevel) }}
+                        </span>
+                      }
+                      @if (candidate.englishLevel) {
+                        <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-1">
+                          Inglês: {{ englishLabel(candidate.englishLevel) }}
+                        </span>
+                      }
+                      @for (technology of candidate.technologies; track technology.id) {
+                        <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-1">
+                          {{ technology.name }}
+                        </span>
+                      }
+                    </div>
+                  }
                 </div>
-                <span class="text-muted small align-self-start">#{{ candidate.id }}</span>
+                <div class="d-flex flex-column align-items-end gap-2">
+                  <span class="text-muted small">#{{ candidate.id }}</span>
+                  <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                          (click)="openEditModal(candidate)">
+                    Editar perfil
+                  </button>
+                </div>
               </div>
             </div>
           }
@@ -125,7 +150,7 @@
       <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 rounded-4 shadow-lg">
           <div class="modal-header border-0 pb-0">
-            <h5 class="modal-title fw-bold">Novo Candidato</h5>
+            <h5 class="modal-title fw-bold">{{ isEditMode ? 'Perfil do Candidato' : 'Novo Candidato' }}</h5>
             <button type="button" class="btn-close" (click)="closeModal()" aria-label="Fechar"></button>
           </div>
           <form [formGroup]="candidateForm" (ngSubmit)="submit()">
@@ -133,7 +158,13 @@
               @if (errorMessage) {
                 <div class="alert alert-danger py-2 small">{{ errorMessage }}</div>
               }
-              <div class="row g-3">
+              @if (isLoadingProfile) {
+                <div class="text-center py-4">
+                  <div class="spinner-border text-primary" role="status"></div>
+                  <p class="text-muted small mt-2 mb-0">A carregar perfil...</p>
+                </div>
+              }
+              <div class="row g-3" [class.d-none]="isLoadingProfile">
                 <div class="col-md-8">
                   <label class="form-label fw-medium">Nome <span class="text-danger">*</span></label>
                   <input type="text" class="form-control" formControlName="name">
@@ -176,11 +207,60 @@
                     <div class="text-danger small mt-1">Informe o telefone.</div>
                   }
                 </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-medium">Formação académica</label>
+                  <select class="form-select" formControlName="educationLevel">
+                    <option [ngValue]="null">Não informado</option>
+                    @for (level of educationLevels; track level.value) {
+                      <option [value]="level.value">{{ level.label }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-medium">Nível de inglês</label>
+                  <select class="form-select" formControlName="englishLevel">
+                    <option [ngValue]="null">Não informado</option>
+                    @for (level of englishLevels; track level.value) {
+                      <option [value]="level.value">{{ level.label }}</option>
+                    }
+                  </select>
+                </div>
               </div>
 
               <hr class="my-4">
+              <h6 class="fw-bold mb-2">Tecnologias dominadas</h6>
+              <p class="text-muted small">Selecione as tecnologias agrupadas por categoria.</p>
+              <div class="row g-3" [class.d-none]="isLoadingProfile">
+                @for (group of technologyGroups; track group.category) {
+                  <div class="col-md-6">
+                    <div class="border rounded-3 p-3 h-100">
+                      <div class="fw-semibold small mb-2">{{ group.label }}</div>
+                      <div class="d-flex flex-column gap-1">
+                        @for (technology of group.technologies; track technology.id) {
+                          <label class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox"
+                                   [checked]="isTechSelected(technology.id)"
+                                   (change)="onTechToggle(technology.id, $event)">
+                            <span class="form-check-label small">{{ technology.name }}</span>
+                          </label>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              @if (candidateTechnologies.length > 0) {
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                  @for (technology of candidateTechnologies; track technology.id) {
+                    <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1">{{ technology.name }}</span>
+                  }
+                </div>
+              }
+
+              <hr class="my-4">
               <h6 class="fw-bold mb-3">Endereço</h6>
-              <div class="row g-3" formGroupName="address">
+              <div class="row g-3" formGroupName="address" [class.d-none]="isLoadingProfile">
                 <div class="col-md-8">
                   <label class="form-label small text-muted">Rua</label>
                   <input type="text" class="form-control" formControlName="street">

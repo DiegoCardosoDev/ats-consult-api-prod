@@ -1,0 +1,89 @@
+<div class="privacy-page">
+  <div class="container py-5">
+    <div class="d-flex align-items-center justify-content-between gap-3 mb-4">
+      <div class="d-flex align-items-center gap-2">
+        <span class="logo-badge bg-primary px-2 py-1 rounded fs-6">TN</span>
+        <span class="fs-5 tracking-wide">TN CONSULTORIA</span>
+      </div>
+      <a routerLink="/login" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i> Voltar
+      </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body p-4 p-lg-5">
+        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill mb-3">
+          Versão {{ version }} · Atualizada em {{ updatedAt }}
+        </span>
+        <h1 class="h3 fw-bold mb-3">Política de Privacidade e Proteção de Dados</h1>
+        <p class="text-muted">
+          Esta política explica como a TN Consultoria trata os dados pessoais enviados por candidatos
+          durante os nossos processos seletivos, em conformidade com a Lei Geral de Proteção de Dados
+          Pessoais (LGPD — Lei nº 13.709/2018).
+        </p>
+
+        <h2 class="h5 fw-semibold mt-4">1. Quem é o responsável pelo tratamento</h2>
+        <p>
+          A TN Consultoria é a controladora dos dados pessoais fornecidos neste formulário. Para questões
+          relacionadas com privacidade, o canal do titular é
+          <a [href]="'mailto:' + contact">{{ contact }}</a>.
+        </p>
+
+        <h2 class="h5 fw-semibold mt-4">2. Dados tratados</h2>
+        <p>
+          Podemos tratar dados de identificação e contacto (nome, e-mail, telefone, LinkedIn e endereço),
+          dados profissionais e académicos, tecnologias dominadas, currículo e respostas fornecidas no
+          formulário de candidatura.
+        </p>
+
+        <h2 class="h5 fw-semibold mt-4">3. Finalidade e base legal</h2>
+        <p>
+          Os dados são utilizados para avaliar a candidatura, conduzir o processo seletivo, comunicar com
+          o candidato e cumprir obrigações legais aplicáveis. O tratamento baseia-se no consentimento do
+          titular e, quando aplicável, em procedimentos preliminares ao contrato e no cumprimento de
+          obrigações legais.
+        </p>
+
+        <h2 class="h5 fw-semibold mt-4">4. Partilha de dados</h2>
+        <p>
+          Os dados podem ser acedidos por profissionais envolvidos no processo seletivo e por prestadores
+          de serviços que apoiem a operação, sempre com medidas de segurança e confidencialidade. Não
+          vendemos dados pessoais.
+        </p>
+
+        <h2 class="h5 fw-semibold mt-4">5. Prazo de conservação</h2>
+        <p>
+          Os dados são conservados pelo período necessário à avaliação da candidatura e ao cumprimento de
+          obrigações legais. Quando deixarem de ser necessários, serão eliminados ou anonimizados, salvo
+          se existir outra base legal que justifique a conservação.
+        </p>
+
+        <h2 class="h5 fw-semibold mt-4">6. Direitos do titular</h2>
+        <p>
+          O candidato pode solicitar confirmação do tratamento, acesso, correção, anonimização, bloqueio
+          ou eliminação de dados, portabilidade, informação sobre partilhas e revogação do consentimento.
+          Os pedidos podem ser enviados para
+          <a [href]="'mailto:' + contact">{{ contact }}</a>.
+        </p>
+
+        <h2 class="h5 fw-semibold mt-4">7. Segurança</h2>
+        <p>
+          Adotamos medidas técnicas e organizativas para proteger os dados contra acesso não autorizado,
+          perda, alteração ou divulgação indevida.
+        </p>
+
+        <h2 class="h5 fw-semibold mt-4">8. Consentimento</h2>
+        <p class="mb-0">
+          Ao marcar a caixa de consentimento antes de enviar a candidatura, o titular declara que leu e
+          compreendeu esta política e autoriza o tratamento dos seus dados para as finalidades descritas.
+          O consentimento pode ser revogado a qualquer momento, sem prejuízo da licitude do tratamento
+          realizado anteriormente.
+        </p>
+      </div>
+    </div>
+
+    <p class="text-muted small text-center mt-4 mb-0">
+      Documento informativo sujeito a revisão jurídica antes da publicação definitiva.
+    </p>
+  </div>
+</div>

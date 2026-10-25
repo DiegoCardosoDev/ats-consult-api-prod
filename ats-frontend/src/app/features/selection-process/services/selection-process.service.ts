@@ -14,6 +14,7 @@ import {
 } from '../models/selection-process.model';
 import { PageResponse } from '../../../core/models/page-response.model';
 import { environment } from '../../../../environments/environment';
+import { PRIVACY_POLICY_VERSION } from '../../../core/constants/privacy-policy.constants';
 
 @Injectable({ providedIn: 'root' })
 export class SelectionProcessService {
@@ -84,6 +85,10 @@ export class SelectionProcessService {
       data.append('answers',
         new Blob([JSON.stringify({ answers })], { type: 'application/json' }));
     }
+    data.append('consent', new Blob([JSON.stringify({
+      accepted: true,
+      version: PRIVACY_POLICY_VERSION
+    })], { type: 'application/json' }));
     return data;
   }
 }

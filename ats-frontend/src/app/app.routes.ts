@@ -9,9 +9,11 @@ import { CandidateListComponent } from './features/candidate/components/candidat
 import { ClientListComponent } from './features/client/components/client-list/client-list.component';
 import { ProcessListComponent } from './features/selection-process/components/process-list/process-list.component';
 import { ProcessDetailComponent } from './features/selection-process/components/process-detail/process-detail.component';
+import { PrivacyPolicyComponent } from './features/privacy/privacy-policy.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
+  { path: 'privacidade', component: PrivacyPolicyComponent },
   
   // Rotas protegidas pelo Guard
   { path: 'home', component: HomeComponent, canActivate: [authGuard] },

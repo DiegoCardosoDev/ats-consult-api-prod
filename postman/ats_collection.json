@@ -38,18 +38,71 @@
     }
   ],
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8080", "type": "string" },
-    { "key": "session_cookie_name", "value": "ats_session", "type": "string" },
-    { "key": "admin_email", "value": "admin@tnconsultoria.com", "type": "string" },
-    { "key": "admin_password", "value": "123456", "type": "string" },
-    { "key": "client_id", "value": "1", "type": "string" },
-    { "key": "technology_id", "value": "1", "type": "string" },
-    { "key": "candidate_id", "value": "1", "type": "string" },
-    { "key": "job_position_id", "value": "1", "type": "string" },
-    { "key": "form_question_id", "value": "1", "type": "string" },
-    { "key": "selection_process_id", "value": "1", "type": "string" },
-    { "key": "application_id", "value": "1", "type": "string" },
-    { "key": "comment_id", "value": "1", "type": "string" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "session_cookie_name",
+      "value": "ats_session",
+      "type": "string"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@tnconsultoria.com",
+      "type": "string"
+    },
+    {
+      "key": "admin_password",
+      "value": "123456",
+      "type": "string"
+    },
+    {
+      "key": "client_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "technology_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "candidate_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "job_position_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "form_question_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "application_answers",
+      "value": "{\"answers\":[]}",
+      "type": "string"
+    },
+    {
+      "key": "selection_process_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "application_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "comment_id",
+      "value": "1",
+      "type": "string"
+    }
   ],
   "item": [
     {
@@ -80,8 +133,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/auth/csrf",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "csrf"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "csrf"
+              ]
             },
             "description": "Gera o cookie XSRF-TOKEN. Necessário quando CSRF_ENABLED=true."
           },
@@ -110,17 +170,31 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
             },
             "description": "Autentica e cria uma sessão opaca no servidor; devolve Set-Cookie ats_session (HttpOnly)."
           },
@@ -151,8 +225,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/auth/me",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "me"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
             },
             "description": "Valida a sessão opaca no servidor pelo cookie HttpOnly e devolve id, email e role."
           },
@@ -176,17 +257,31 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"novo.usuario.{{$timestamp}}@example.com\",\n  \"password\": \"senhaSegura123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/register",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "register"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
             },
             "description": "Cria usuário com papel USER e cria sessão no servidor. Desativado no perfil prod por padrão; habilite com REGISTRATION_ENABLED=true."
           },
@@ -218,8 +313,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/auth/logout",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "logout"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
             },
             "description": "Invalida a sessão no servidor e limpa o cookie."
           },
@@ -265,17 +367,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Cliente Postman {{$timestamp}}\",\n  \"cnpj\": \"{{generated_cnpj}}\",\n  \"code\": \"CLI-{{$timestamp}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/clients",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "clients"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients"
+              ]
             },
             "description": "Cria cliente. Salva o ID em `client_id`."
           },
@@ -288,8 +403,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/clients",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "clients"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients"
+              ]
             }
           },
           "response": []
@@ -301,8 +422,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/clients/{{client_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "clients", "{{client_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients",
+                "{{client_id}}"
+              ]
             }
           },
           "response": []
@@ -333,17 +461,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Java {{$timestamp}}\",\n  \"category\": \"LANGUAGE\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/technologies",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "technologies"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "technologies"
+              ]
             },
             "description": "Cria tecnologia. Salva o ID em `technology_id`."
           },
@@ -356,8 +497,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/technologies",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "technologies"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "technologies"
+              ]
             }
           },
           "response": []
@@ -369,8 +516,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/technologies/{{technology_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "technologies", "{{technology_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "technologies",
+                "{{technology_id}}"
+              ]
             }
           },
           "response": []
@@ -382,8 +536,16 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/technologies/parent/{{technology_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "technologies", "parent", "{{technology_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "technologies",
+                "parent",
+                "{{technology_id}}"
+              ]
             }
           },
           "response": []
@@ -417,17 +579,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"clientId\": {{client_id}},\n  \"title\": \"Backend Developer Postman {{$timestamp}}\",\n  \"description\": \"Vaga criada pela collection Postman.\",\n  \"status\": \"OPEN\",\n  \"workModel\": \"REMOTE\",\n  \"minSalary\": 3000,\n  \"maxSalary\": 6000,\n  \"location\": { \"city\": \"Lisboa\", \"state\": \"Lisboa\", \"country\": \"Portugal\" },\n  \"contractType\": \"CLT\",\n  \"educationLevel\": \"BACHELORS\",\n  \"englishLevel\": \"INTERMEDIATE\",\n  \"technologyIds\": [{{technology_id}}]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/job-positions",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "job-positions"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "job-positions"
+              ]
             },
             "description": "Cria vaga OPEN. Salva o ID em `job_position_id`."
           },
@@ -440,12 +615,27 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/job-positions?page=0&size=20&sort=id,desc",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "job-positions"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "job-positions"
+              ],
               "query": [
-                { "key": "page", "value": "0" },
-                { "key": "size", "value": "20" },
-                { "key": "sort", "value": "id,desc" }
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "id,desc"
+                }
               ]
             }
           },
@@ -458,8 +648,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "job-positions", "{{job_position_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "job-positions",
+                "{{job_position_id}}"
+              ]
             }
           },
           "response": []
@@ -482,17 +679,31 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"clientId\": {{client_id}},\n  \"title\": \"Backend Developer Postman (atualizada)\",\n  \"description\": \"Vaga atualizada pela collection Postman.\",\n  \"status\": \"OPEN\",\n  \"workModel\": \"HYBRID\",\n  \"minSalary\": 3500,\n  \"maxSalary\": 7000,\n  \"location\": { \"city\": \"Lisboa\", \"state\": \"Lisboa\", \"country\": \"Portugal\" },\n  \"contractType\": \"CLT\",\n  \"educationLevel\": \"BACHELORS\",\n  \"englishLevel\": \"ADVANCED\",\n  \"technologyIds\": [{{technology_id}}]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "job-positions", "{{job_position_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "job-positions",
+                "{{job_position_id}}"
+              ]
             }
           },
           "response": []
@@ -525,19 +736,82 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Candidato Postman\",\n  \"age\": 30,\n  \"role\": \"Backend Developer\",\n  \"linkedinUrl\": \"https://www.linkedin.com/in/candidato-postman\",\n  \"email\": \"candidato.fixo.postman@example.com\",\n  \"phone\": \"+351912345678\",\n  \"address\": {\n    \"street\": \"Rua A\",\n    \"number\": \"10\",\n    \"complement\": \"\",\n    \"neighborhood\": \"Centro\",\n    \"city\": \"Lisboa\",\n    \"state\": \"Lisboa\",\n    \"zipCode\": \"1000-000\",\n    \"country\": \"Portugal\"\n  }\n}",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\n  \"name\": \"Candidato Postman\",\n  \"age\": 30,\n  \"role\": \"Backend Developer\",\n  \"linkedinUrl\": \"https://www.linkedin.com/in/candidato-postman\",\n  \"email\": \"candidato.fixo.postman@example.com\",\n  \"phone\": \"+351912345678\",\n  \"educationLevel\": \"BACHELORS\",\n  \"englishLevel\": \"ADVANCED\",\n  \"technologyIds\": [{{technology_id}}],\n  \"address\": {\n    \"street\": \"Rua A\",\n    \"number\": \"10\",\n    \"complement\": \"\",\n    \"neighborhood\": \"Centro\",\n    \"city\": \"Lisboa\",\n    \"state\": \"Lisboa\",\n    \"zipCode\": \"1000-000\",\n    \"country\": \"Portugal\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/candidates",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "candidates"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ]
             },
             "description": "Cria candidato. Se o e-mail já existir, retorna 409 (esperado)."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar candidato",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Candidato atualizado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.id) { pm.collectionVariables.set('candidate_id', String(data.id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Candidato Postman Atualizado\",\n  \"age\": 31,\n  \"role\": \"Senior Backend Developer\",\n  \"linkedinUrl\": \"https://www.linkedin.com/in/candidato-postman\",\n  \"email\": \"candidato.fixo.postman@example.com\",\n  \"phone\": \"+351912345678\",\n  \"educationLevel\": \"SPECIALIZATION\",\n  \"englishLevel\": \"FLUENT\",\n  \"technologyIds\": [{{technology_id}}],\n  \"address\": {\n    \"street\": \"Rua A\",\n    \"number\": \"10\",\n    \"complement\": \"\",\n    \"neighborhood\": \"Centro\",\n    \"city\": \"Lisboa\",\n    \"state\": \"Lisboa\",\n    \"zipCode\": \"1000-000\",\n    \"country\": \"Portugal\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/candidates/{{candidate_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates",
+                "{{candidate_id}}"
+              ]
+            },
+            "description": "Atualiza dados e perfil do candidato. Campos de perfil omitidos são limpos."
           },
           "response": []
         },
@@ -548,12 +822,27 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/candidates?name=Postman&page=0&size=20",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "candidates"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates"
+              ],
               "query": [
-                { "key": "name", "value": "Postman" },
-                { "key": "page", "value": "0" },
-                { "key": "size", "value": "20" }
+                {
+                  "key": "name",
+                  "value": "Postman"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
               ]
             }
           },
@@ -566,8 +855,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/candidates/{{candidate_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "candidates", "{{candidate_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "candidates",
+                "{{candidate_id}}"
+              ]
             }
           },
           "response": []
@@ -590,6 +886,10 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "const data = pm.response.json();",
+                  "pm.test('Perguntas essenciais preservadas', function () {",
+                  "  const keys = data.questions.map(q => q.questionKey);",
+                  "  pm.expect(keys).to.include.members(['FULL_NAME', 'AGE', 'ROLE', 'EMAIL', 'PHONE']);",
+                  "});",
                   "if (data.questions && data.questions.length > 0) {",
                   "  pm.collectionVariables.set('form_question_id', String(data.questions[0].id));",
                   "}"
@@ -600,19 +900,78 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Perguntas do processo\",\n  \"description\": \"Formulário criado pela collection Postman.\",\n  \"active\": true,\n  \"questions\": [\n    {\n      \"prompt\": \"Possui experiência com Java?\",\n      \"type\": \"YES_NO\",\n      \"required\": true,\n      \"options\": [],\n      \"position\": 1\n    },\n    {\n      \"prompt\": \"Quantos anos de experiência?\",\n      \"type\": \"NUMBER\",\n      \"required\": false,\n      \"options\": [],\n      \"position\": 2\n    }\n  ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "raw": "{\n  \"title\": \"Perguntas do processo\",\n  \"description\": \"Formulário criado pela collection Postman.\",\n  \"active\": true,\n  \"questions\": [\n    {\n      \"prompt\": \"Possui experiência com Java?\",\n      \"type\": \"YES_NO\",\n      \"required\": true,\n      \"options\": [],\n      \"position\": 1,\n      \"questionKey\": \"CUSTOM_JAVA_EXPERIENCE\",\n      \"systemGenerated\": false\n    },\n    {\n      \"prompt\": \"Quantos anos de experiência?\",\n      \"type\": \"NUMBER\",\n      \"required\": false,\n      \"options\": [],\n      \"position\": 2,\n      \"questionKey\": \"CUSTOM_YEARS_EXPERIENCE\",\n      \"systemGenerated\": false\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}/application-form",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "job-positions", "{{job_position_id}}", "application-form"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "job-positions",
+                "{{job_position_id}}",
+                "application-form"
+              ]
             },
-            "description": "Cria/atualiza o formulário ativo da vaga. Salva o ID da primeira pergunta em `form_question_id`."
+            "description": "Cria/atualiza o formulário ativo da vaga. As perguntas essenciais (nome, idade, cargo, e-mail e telefone) são acrescentadas automaticamente caso não sejam enviadas. Salva o ID da primeira pergunta em `form_question_id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Regenerar formulário pelo template",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Formulário regenerado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "pm.test('Template com perguntas padrão', function () {",
+                  "  pm.expect(data.questions.length).to.be.at.least(5);",
+                  "  pm.expect(data.questions[0].questionKey).to.eql('FULL_NAME');",
+                  "});",
+                  "if (data.questions && data.questions.length > 0) {",
+                  "  pm.collectionVariables.set('form_question_id', String(data.questions[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}/application-form/generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "job-positions",
+                "{{job_position_id}}",
+                "application-form",
+                "generate"
+              ]
+            },
+            "description": "Recria as perguntas padrão e as perguntas obrigatórias de tecnologias da vaga, uma por categoria e uma por tecnologia pai com filhos. Perguntas de tecnologia são MULTIPLE_CHOICE com as opções do catálogo; categorias/pais com uma única opção recebem também a opção exclusiva 'Não domino'."
           },
           "response": []
         },
@@ -624,9 +983,34 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 com formulário ou 204 sem formulário', function () {",
-                  "  pm.expect([200, 204]).to.include(pm.response.code);",
-                  "});"
+                  "pm.test('200 com formulário ativo ou template gerado automaticamente', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "});",
+                  "const form = pm.response.json();",
+                  "const defaults = {",
+                  "  FULL_NAME: 'Candidato Postman',",
+                  "  AGE: '30',",
+                  "  ROLE: 'Desenvolvedor',",
+                  "  EMAIL: 'candidato.postman.' + Date.now() + '@example.com',",
+                  "  PHONE: '+351 912 345 678',",
+                  "  SALARY_EXPECTATION: '5000',",
+                  "  WORK_MODEL: 'REMOTE',",
+                  "  EDUCATION_LEVEL: 'BACHELORS',",
+                  "  ENGLISH_LEVEL: 'ADVANCED'",
+                  "};",
+                  "const answers = (form.questions || []).filter(q => q.required).map(q => {",
+                  "  let answer = defaults[q.questionKey];",
+                  "  if (!answer) {",
+                  "    if (q.type === 'NUMBER') answer = '1';",
+                  "    else if (q.type === 'YES_NO') answer = 'Sim';",
+                  "    else if (q.type === 'MULTIPLE_CHOICE') answer = (q.options || []).slice(0, q.maxSelections || 1).join('; ');",
+                  "    else if (q.type === 'SINGLE_CHOICE') answer = (q.options || [])[0] || '';",
+                  "    else answer = 'Resposta de teste';",
+                  "  }",
+                  "  return { questionId: q.id, answer };",
+                  "});",
+                  "pm.collectionVariables.set('application_answers', JSON.stringify({ answers }));",
+                  "pm.collectionVariables.set('form_question_id', String((form.questions || [])[0] ? form.questions[0].id : ''));"
                 ]
               }
             }
@@ -636,8 +1020,16 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}/application-form",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "job-positions", "{{job_position_id}}", "application-form"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "job-positions",
+                "{{job_position_id}}",
+                "application-form"
+              ]
             }
           },
           "response": []
@@ -668,17 +1060,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"clientId\": {{client_id}},\n  \"jobPositionId\": {{job_position_id}},\n  \"status\": \"OPEN\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/selection-processes",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "selection-processes"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "selection-processes"
+              ]
             },
             "description": "O clientId deve ser o mesmo cliente da vaga. Salva `selection_process_id`."
           },
@@ -691,12 +1096,27 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/selection-processes?page=0&size=20&sort=openedAt,desc",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "selection-processes"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "selection-processes"
+              ],
               "query": [
-                { "key": "page", "value": "0" },
-                { "key": "size", "value": "20" },
-                { "key": "sort", "value": "openedAt,desc" }
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "openedAt,desc"
+                }
               ]
             }
           },
@@ -709,8 +1129,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/selection-processes/{{selection_process_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "selection-processes", "{{selection_process_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "selection-processes",
+                "{{selection_process_id}}"
+              ]
             },
             "description": "Retorna cliente, vaga, status, candidaturas, respostas, status Kanban e comentários."
           },
@@ -755,16 +1182,30 @@
                   "key": "answers",
                   "type": "text",
                   "contentType": "application/json",
-                  "value": "{\n  \"answers\": [\n    { \"questionId\": {{form_question_id}}, \"answer\": \"Sim\" }\n  ]\n}"
+                  "value": "{{application_answers}}"
+                },
+                {
+                  "key": "consent",
+                  "type": "text",
+                  "contentType": "application/json",
+                  "value": "{\n  \"accepted\": true,\n  \"version\": \"1.0\"\n}"
                 }
               ]
             },
             "url": {
               "raw": "{{base_url}}/api/v1/selection-processes/{{selection_process_id}}/candidates",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "selection-processes", "{{selection_process_id}}", "candidates"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "selection-processes",
+                "{{selection_process_id}}",
+                "candidates"
+              ]
             },
-            "description": "Multipart: candidate (JSON), resume (PDF) e answers (JSON opcional). Selecione um PDF real."
+            "description": "Multipart: candidate (JSON), resume (PDF), answers (JSON gerado por `Buscar formulário` em `application_answers`, cobrindo as perguntas obrigatórias) e consent (JSON obrigatório com `accepted=true` e `version`). Selecione um PDF real."
           },
           "response": []
         }
@@ -792,6 +1233,17 @@
                   "  pm.test('Status inicial é TRIAGEM', function () {",
                   "    pm.expect(data.application.status).to.eql('TRIAGEM');",
                   "  });",
+                  "}",
+                  "if (data.application && data.application.adherence) {",
+                  "  pm.test('Aderência calculada', function () {",
+                  "    pm.expect(data.application.adherence.percentage).to.be.within(0, 100);",
+                  "  });",
+                  "}",
+                  "if (data.application && data.application.consent) {",
+                  "  pm.test('Consentimento LGPD registado', function () {",
+                  "    pm.expect(data.application.consent.accepted).to.eql(true);",
+                  "    pm.expect(data.application.consent.version).to.eql('1.0');",
+                  "  });",
                   "}"
                 ]
               }
@@ -818,16 +1270,30 @@
                   "key": "answers",
                   "type": "text",
                   "contentType": "application/json",
-                  "value": "{\n  \"answers\": [\n    { \"questionId\": {{form_question_id}}, \"answer\": \"Sim\" }\n  ]\n}"
+                  "value": "{{application_answers}}"
+                },
+                {
+                  "key": "consent",
+                  "type": "text",
+                  "contentType": "application/json",
+                  "value": "{\n  \"accepted\": true,\n  \"version\": \"1.0\"\n}"
                 }
               ]
             },
             "url": {
               "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}/applications",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "job-positions", "{{job_position_id}}", "applications"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "job-positions",
+                "{{job_position_id}}",
+                "applications"
+              ]
             },
-            "description": "Candidatura por vaga; o cliente é herdado da vaga. Reutiliza processo OPEN do mesmo cliente/vaga. Salva `application_id` e `selection_process_id`."
+            "description": "Candidatura por vaga; o cliente é herdado da vaga. Reutiliza processo OPEN do mesmo cliente/vaga. Usa `application_answers` gerado por `Buscar formulário` para cobrir as perguntas obrigatórias, envia consentimento LGPD obrigatório e salva `application_id` e `selection_process_id`."
           },
           "response": []
         },
@@ -852,8 +1318,16 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/applications/{{application_id}}/resume",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "applications", "{{application_id}}", "resume"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "{{application_id}}",
+                "resume"
+              ]
             },
             "description": "Download do PDF (Content-Disposition: attachment)."
           },
@@ -881,17 +1355,32 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"ENTREVISTA_TECH_RECRUITER\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/applications/{{application_id}}/status",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "applications", "{{application_id}}", "status"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "{{application_id}}",
+                "status"
+              ]
             },
             "description": "Move o card no Kanban. Requer ADMIN ou TECH_RECRUITER. Valores aceitos: TRIAGEM, ENTRAR_EM_CONTATO, ENTREVISTA_TECH_RECRUITER, APROVADO_ENTREVISTA_CLIENTE, APROVADO_CLIENTE, REPROVADO, DECLINOU, STAND_BY."
           },
@@ -915,17 +1404,32 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"STAND_BY\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/applications/{{application_id}}/status",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "applications", "{{application_id}}", "status"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "{{application_id}}",
+                "status"
+              ]
             },
             "description": "Exemplo adicional de movimentação para STAND_BY."
           },
@@ -958,8 +1462,16 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/applications/{{application_id}}/comments",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "applications", "{{application_id}}", "comments"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "{{application_id}}",
+                "comments"
+              ]
             },
             "description": "Comentários ordenados do mais recente para o mais antigo."
           },
@@ -989,17 +1501,32 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"message\": \"Comentário criado pela collection Postman em {{$isoTimestamp}}.\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{base_url}}/api/v1/applications/{{application_id}}/comments",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "applications", "{{application_id}}", "comments"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "{{application_id}}",
+                "comments"
+              ]
             },
             "description": "Cria comentário. O autor é extraído do usuário autenticado; limite de 2000 caracteres."
           },
@@ -1018,8 +1545,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/actuator/health",
-              "host": ["{{base_url}}"],
-              "path": ["actuator", "health"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
             }
           },
           "response": []

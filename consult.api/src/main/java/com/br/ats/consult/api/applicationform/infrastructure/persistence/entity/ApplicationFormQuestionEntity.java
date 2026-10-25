@@ -1,6 +1,7 @@
 package com.br.ats.consult.api.applicationform.infrastructure.persistence.entity;
 
 import com.br.ats.consult.api.applicationform.domain.enums.QuestionTypeEnum;
+import com.br.ats.consult.api.technology.domain.model.TechnologyCategoryEnum;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -53,6 +54,22 @@ public class ApplicationFormQuestionEntity {
 
     @Column(name = "question_order", nullable = false)
     private Integer position;
+
+    @Column(name = "question_key", length = 100)
+    private String questionKey;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "technology_category", length = 50)
+    private TechnologyCategoryEnum technologyCategory;
+
+    @Column(name = "parent_technology_id")
+    private Long parentTechnologyId;
+
+    @Column(name = "max_selections")
+    private Integer maxSelections;
+
+    @Column(name = "system_generated", nullable = false)
+    private boolean systemGenerated;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(

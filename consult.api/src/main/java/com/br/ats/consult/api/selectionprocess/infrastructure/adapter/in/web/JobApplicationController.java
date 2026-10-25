@@ -5,10 +5,13 @@ import com.br.ats.consult.api.candidate.infrastructure.adapter.in.web.dto.Candid
 import com.br.ats.consult.api.candidate.infrastructure.adapter.in.web.mapper.CandidateWebMapper;
 import com.br.ats.consult.api.selectionprocess.domain.exception.InvalidResumeException;
 import com.br.ats.consult.api.selectionprocess.domain.model.CandidateApplicationResult;
+import com.br.ats.consult.api.selectionprocess.domain.model.PrivacyConsentInput;
 import com.br.ats.consult.api.selectionprocess.domain.model.ResumeUpload;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.ApplyCandidateUseCase;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.ApplyCandidateResponse;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.FormAnswersRequest;
+import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.PrivacyConsentRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -41,12 +44,15 @@ public class JobApplicationController {
             @PathVariable Long jobId,
             @RequestPart("candidate") @Valid CandidateRequest candidateRequest,
             @RequestPart("resume") MultipartFile resume,
-            @RequestPart(value = "answers", required = false) @Valid FormAnswersRequest answersRequest) {
+            @RequestPart(value = "answers", required = false) @Valid FormAnswersRequest answersRequest,
+            @RequestPart(value = "consent", required = false) @Valid PrivacyConsentRequest consentRequest,
+            HttpServletRequest httpRequest) {
         CandidateApplicationResult result = applyCandidateUseCase.applyToJob(
                 jobId,
                 candidateWebMapper.toDomain(candidateRequest),
                 toResumeUpload(resume),
-                toAnswerInputs(answersRequest)
+                toAnswerInputs(answersRequest),
+                toConsentInput(consentRequest, httpRequest)
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(ApplyCandidateResponse.fromDomain(result));
     }
@@ -58,6 +64,17 @@ public class JobApplicationController {
         return request.answers().stream()
                 .map(answer -> new FormAnswerInput(answer.questionId(), answer.answer()))
                 .toList();
+    }
+
+    private PrivacyConsentInput toConsentInput(PrivacyConsentRequest request, HttpServletRequest httpRequest) {
+        if (request == null) {
+            return null;
+        }
+        return new PrivacyConsentInput(
+                Boolean.TRUE.equals(request.accepted()),
+                request.version(),
+                httpRequest.getRemoteAddr()
+        );
     }
 
     private ResumeUpload toResumeUpload(MultipartFile file) {

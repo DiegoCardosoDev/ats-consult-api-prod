@@ -7,6 +7,7 @@ import com.br.ats.consult.api.selectionprocess.domain.exception.InvalidResumeExc
 import com.br.ats.consult.api.selectionprocess.domain.exception.SelectionProcessNotFoundException;
 import com.br.ats.consult.api.selectionprocess.domain.model.CandidateApplication;
 import com.br.ats.consult.api.selectionprocess.domain.model.CandidateApplicationResult;
+import com.br.ats.consult.api.selectionprocess.domain.model.PrivacyConsentInput;
 import com.br.ats.consult.api.selectionprocess.domain.model.ResumeUpload;
 import com.br.ats.consult.api.selectionprocess.domain.model.SelectionProcess;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.ApplyCandidateUseCase;
@@ -15,10 +16,12 @@ import com.br.ats.consult.api.selectionprocess.domain.usecase.FindSelectionProce
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.ApplyCandidateResponse;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.CreateSelectionProcessRequest;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.FormAnswersRequest;
+import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.PrivacyConsentRequest;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.SelectionProcessResponse;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto.SelectionProcessSummaryResponse;
 import com.br.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.mapper.SelectionProcessWebMapper;
 import com.br.ats.consult.api.shared.infrastructure.adapter.in.web.dto.PageResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -89,12 +92,15 @@ public class SelectionProcessController {
             @PathVariable Long id,
             @RequestPart("candidate") @Valid CandidateRequest candidateRequest,
             @RequestPart("resume") MultipartFile resume,
-            @RequestPart(value = "answers", required = false) @Valid FormAnswersRequest answersRequest) {
+            @RequestPart(value = "answers", required = false) @Valid FormAnswersRequest answersRequest,
+            @RequestPart(value = "consent", required = false) @Valid PrivacyConsentRequest consentRequest,
+            HttpServletRequest httpRequest) {
         CandidateApplicationResult result = applyCandidateUseCase.applyToProcess(
                 id,
                 candidateWebMapper.toDomain(candidateRequest),
                 toResumeUpload(resume),
-                toAnswerInputs(answersRequest)
+                toAnswerInputs(answersRequest),
+                toConsentInput(consentRequest, httpRequest)
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(ApplyCandidateResponse.fromDomain(result));
     }
@@ -106,6 +112,17 @@ public class SelectionProcessController {
         return request.answers().stream()
                 .map(answer -> new FormAnswerInput(answer.questionId(), answer.answer()))
                 .toList();
+    }
+
+    private PrivacyConsentInput toConsentInput(PrivacyConsentRequest request, HttpServletRequest httpRequest) {
+        if (request == null) {
+            return null;
+        }
+        return new PrivacyConsentInput(
+                Boolean.TRUE.equals(request.accepted()),
+                request.version(),
+                httpRequest.getRemoteAddr()
+        );
     }
 
     private ResumeUpload toResumeUpload(MultipartFile file) {

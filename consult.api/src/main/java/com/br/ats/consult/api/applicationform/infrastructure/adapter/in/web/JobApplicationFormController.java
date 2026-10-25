@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,10 +33,7 @@ public class JobApplicationFormController {
 
     @GetMapping
     public ResponseEntity<ApplicationFormResponse> findByJob(@PathVariable Long jobId) {
-        return useCase.findByJobPositionId(jobId)
-                .map(ApplicationFormResponse::fromDomain)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.noContent().build());
+        return ResponseEntity.ok(ApplicationFormResponse.fromDomain(useCase.resolveForJob(jobId)));
     }
 
     @PutMapping
@@ -43,6 +41,12 @@ public class JobApplicationFormController {
                                                         @RequestBody @Valid ApplicationFormRequest request) {
         ApplicationForm saved = useCase.save(toDomain(jobId, request));
         return ResponseEntity.ok(ApplicationFormResponse.fromDomain(saved));
+    }
+
+    @PostMapping("/generate")
+    public ResponseEntity<ApplicationFormResponse> generate(@PathVariable Long jobId) {
+        ApplicationForm generated = useCase.generateForJob(jobId);
+        return ResponseEntity.ok(ApplicationFormResponse.fromDomain(generated));
     }
 
     @DeleteMapping
@@ -75,6 +79,11 @@ public class JobApplicationFormController {
                 .required(question.required())
                 .options(question.options() == null ? new ArrayList<>() : new ArrayList<>(question.options()))
                 .position(question.position())
+                .questionKey(question.questionKey())
+                .technologyCategory(question.technologyCategory())
+                .parentTechnologyId(question.parentTechnologyId())
+                .maxSelections(question.maxSelections())
+                .systemGenerated(Boolean.TRUE.equals(question.systemGenerated()))
                 .build();
     }
 }

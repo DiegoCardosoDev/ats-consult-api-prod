@@ -1,11 +1,16 @@
 package com.br.ats.consult.api.candidate.domain.model;
 
+import com.br.ats.consult.api.job.domain.enums.EducationLevelEnum;
+import com.br.ats.consult.api.job.domain.enums.EnglishLevelEnum;
+import com.br.ats.consult.api.technology.domain.model.Technology;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 @Getter
@@ -22,6 +27,10 @@ public class Candidate {
     private String linkedinUrl;
     private String email;
     private String phone;
+    private EducationLevelEnum educationLevel;
+    private EnglishLevelEnum englishLevel;
+    @Builder.Default
+    private List<Technology> technologies = new ArrayList<>();
     private CandidateAddress address;
 
     public void normalize() {
@@ -33,6 +42,9 @@ public class Candidate {
             email = email.toLowerCase(Locale.ROOT);
         }
         phone = trimToNull(phone);
+        if (technologies == null) {
+            technologies = new ArrayList<>();
+        }
         if (address != null) {
             address.normalize();
             if (address.getStreet() == null && address.getNumber() == null && address.getComplement() == null
@@ -68,6 +80,15 @@ public class Candidate {
         this.linkedinUrl = source.getLinkedinUrl();
         this.email = source.getEmail();
         this.phone = source.getPhone();
+        if (source.getEducationLevel() != null) {
+            this.educationLevel = source.getEducationLevel();
+        }
+        if (source.getEnglishLevel() != null) {
+            this.englishLevel = source.getEnglishLevel();
+        }
+        if (source.getTechnologies() != null && !source.getTechnologies().isEmpty()) {
+            this.technologies = source.getTechnologies();
+        }
         this.address = source.getAddress();
     }
 

@@ -8,6 +8,7 @@ import {
 } from '../../models/selection-process.model';
 import { SelectionProcessService } from '../../services/selection-process.service';
 import { extractApiErrorMessage } from '../../../../core/utils/api-error.util';
+import { formAnswerLabel } from '../../../technology/technology-category.util';
 
 const STATUS_LABELS: Record<CandidateApplicationStatus, string> = {
   TRIAGEM: 'Triagem',
@@ -69,6 +70,24 @@ export class ApplicationDetailModalComponent implements OnInit {
 
   statusClass(status: CandidateApplicationStatus): string {
     return `status-badge--${status.toLowerCase().replaceAll('_', '-')}`;
+  }
+
+  scoreClass(percentage: number): string {
+    if (percentage >= 75) {
+      return 'is-high';
+    }
+    return percentage >= 50 ? 'is-medium' : 'is-low';
+  }
+
+  scoreLabel(percentage: number): string {
+    if (percentage >= 75) {
+      return 'Alta';
+    }
+    return percentage >= 50 ? 'Média' : 'Baixa';
+  }
+
+  answerLabel(answer: { questionKey?: string; questionPrompt: string; answer: string }): string {
+    return formAnswerLabel(answer.questionKey, answer.answer, answer.questionPrompt);
   }
 
   loadComments(): void {

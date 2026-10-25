@@ -183,7 +183,14 @@
   white-space: nowrap;
 }
 
-.kanban-card__comments {
+.kanban-card__badges {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+}
+
+.kanban-card__comments,
+.kanban-card__adherence {
   display: inline-flex;
   align-items: center;
   gap: .2rem;
@@ -194,6 +201,19 @@
   color: #ffffff;
   font-size: .68rem;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.kanban-card__adherence.is-high {
+  background: rgba(22, 163, 74, .85);
+}
+
+.kanban-card__adherence.is-medium {
+  background: rgba(217, 119, 6, .9);
+}
+
+.kanban-card__adherence.is-low {
+  background: rgba(220, 38, 38, .85);
 }
 
 .kanban-card__meta {

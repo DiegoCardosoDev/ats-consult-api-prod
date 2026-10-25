@@ -12,12 +12,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -88,6 +92,8 @@ class CandidateSelectionProcessIntegrationTest {
         mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
                         .file(jsonCandidate("Bia Costa", "bia@example.com"))
                         .file(pdfFile())
+                        .file(consentFile())
+                        .file(answersFile(jobId, "Bia Costa", "bia@example.com"))
                         .with(user("recruiter").roles("TECH_RECRUITER"))
                         .with(csrf()))
                 .andExpect(status().isConflict());
@@ -120,9 +126,11 @@ class CandidateSelectionProcessIntegrationTest {
 
         mockMvc.perform(get("/api/v1/job-positions/{jobId}/application-form", jobId)
                         .with(user("recruiter").roles("TECH_RECRUITER")))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions.length()", greaterThanOrEqualTo(5)))
+                .andExpect(jsonPath("$.questions[0].questionKey").value("FULL_NAME"));
 
-        MvcResult formCreated = mockMvc.perform(put("/api/v1/job-positions/{jobId}/application-form", jobId)
+        mockMvc.perform(put("/api/v1/job-positions/{jobId}/application-form", jobId)
                         .with(user("recruiter").roles("TECH_RECRUITER"))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -133,58 +141,204 @@ class CandidateSelectionProcessIntegrationTest {
                                   "active":true,
                                   "questions":[
                                     {"prompt":"Tem experiência com Java?","type":"YES_NO","required":true,"options":[],"position":0},
-                                    {"prompt":"Qual o seu nível?","type":"SINGLE_CHOICE","required":false,"options":["Júnior","Pleno","Sênior"],"position":1}
+                                    {"prompt":"Qual o seu nível?","type":"SINGLE_CHOICE","required":true,"options":["Júnior","Pleno","Sênior"],"position":1}
                                   ]
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.jobPositionId").value(jobId))
-                .andExpect(jsonPath("$.questions.length()").value(2))
-                .andReturn();
-
-        Number firstQuestionId = JsonPath.read(formCreated.getResponse().getContentAsString(),
-                "$.questions[0].id");
-        Number secondQuestionId = JsonPath.read(formCreated.getResponse().getContentAsString(),
-                "$.questions[1].id");
+                .andExpect(jsonPath("$.questions.length()", greaterThanOrEqualTo(7)))
+                .andExpect(jsonPath("$.questions[0].questionKey").value("FULL_NAME"))
+                .andExpect(jsonPath("$.questions[1].questionKey").value("AGE"))
+                .andExpect(jsonPath("$.questions[2].questionKey").value("ROLE"))
+                .andExpect(jsonPath("$.questions[3].questionKey").value("EMAIL"))
+                .andExpect(jsonPath("$.questions[4].questionKey").value("PHONE"))
+                .andExpect(jsonPath("$.questions[*].prompt", hasItem("Tem experiência com Java?")))
+                .andExpect(jsonPath("$.questions[*].prompt", hasItem("Qual o seu nível?")));
 
         mockMvc.perform(get("/api/v1/job-positions/{jobId}/application-form", otherJobId)
                         .with(user("recruiter").roles("TECH_RECRUITER")))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions.length()", greaterThanOrEqualTo(5)));
 
         mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
                         .file(jsonCandidate("Diego Formulário", "diego.formulario@example.com"))
                         .file(pdfFile())
+                        .file(consentFile())
                         .with(user("recruiter").roles("TECH_RECRUITER"))
                         .with(csrf()))
                 .andExpect(status().isBadRequest());
 
-        String answers = """
-                {"answers":[
-                  {"questionId":%d,"answer":"Sim"},
-                  {"questionId":%d,"answer":"Sênior"}
-                ]}
-                """.formatted(firstQuestionId.longValue(), secondQuestionId.longValue());
+        MvcResult applied = applyToJob(jobId, "Diego Formulário", "diego.formulario@example.com");
+        Number processId = JsonPath.read(applied.getResponse().getContentAsString(), "$.selectionProcessId");
 
-        MvcResult applied = mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
-                        .file(jsonCandidate("Diego Formulário", "diego.formulario@example.com"))
-                        .file(pdfFile())
-                        .file(new MockMultipartFile("answers", "", MediaType.APPLICATION_JSON_VALUE,
-                                answers.getBytes(StandardCharsets.UTF_8)))
-                        .with(user("recruiter").roles("TECH_RECRUITER"))
-                        .with(csrf()))
-                .andExpect(status().isCreated())
+        MvcResult processResult = mockMvc.perform(get("/api/v1/selection-processes/{id}", processId.longValue())
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidates[0].answers.length()", greaterThanOrEqualTo(7)))
                 .andReturn();
 
+        List<Map<String, Object>> storedAnswers = JsonPath.read(
+                processResult.getResponse().getContentAsString(), "$.candidates[0].answers");
+        assertEquals("Sim", answerForPrompt(storedAnswers, "Tem experiência com Java?"));
+        assertEquals("Júnior", answerForPrompt(storedAnswers, "Qual o seu nível?"));
+    }
+
+    @Test
+    void missingApplicationFormIsGeneratedWhenOpeningJobAndWhenApplying() throws Exception {
+        long clientId = createClient("11222333001118", "CLI-011");
+        long jobId = createJob("Vaga Sem Formulário Persistido", clientId);
+
+        mockMvc.perform(delete("/api/v1/job-positions/{jobId}/application-form", jobId)
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
+                        .file(jsonCandidate("Sem Formulário", "sem.formulario@example.com"))
+                        .file(pdfFile())
+                        .file(consentFile())
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/job-positions/{jobId}/application-form", jobId)
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.questions.length()", greaterThanOrEqualTo(5)))
+                .andExpect(jsonPath("$.questions[0].questionKey").value("FULL_NAME"));
+
+        MvcResult applied = applyToJob(jobId, "Com Formulário", "com.formulario@example.com");
         Number processId = JsonPath.read(applied.getResponse().getContentAsString(), "$.selectionProcessId");
 
         mockMvc.perform(get("/api/v1/selection-processes/{id}", processId.longValue())
                         .with(user("recruiter").roles("TECH_RECRUITER")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.candidates[0].answers.length()").value(2))
-                .andExpect(jsonPath("$.candidates[0].answers[0].questionPrompt")
-                        .value("Tem experiência com Java?"))
-                .andExpect(jsonPath("$.candidates[0].answers[0].answer").value("Sim"))
-                .andExpect(jsonPath("$.candidates[0].answers[1].answer").value("Sênior"));
+                .andExpect(jsonPath("$.candidates[0].answers.length()", greaterThanOrEqualTo(5)));
+    }
+
+    @Test
+    void generatedFormGroupsTechnologyQuestionsAndEnrichesCandidateProfile() throws Exception {
+        long clientId = createClient("11222333000823", "CLI-008");
+        long awsId = createTechnology("AWS", "CLOUD_PROVIDER", null);
+        createTechnology("S3", "STORAGE", awsId);
+        createTechnology("Lambda", "SERVERLESS", awsId);
+        long javaId = createTechnology("Java", "LANGUAGE", null);
+        long kotlinId = createTechnology("Kotlin", "LANGUAGE", null);
+        long jobId = createJobWithTechnologies("Vaga Cloud", clientId, awsId, javaId, kotlinId);
+
+        MvcResult formResult = mockMvc.perform(
+                        get("/api/v1/job-positions/{jobId}/application-form", jobId)
+                                .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions[*].questionKey", hasItem("TECH_CATEGORY_LANGUAGE")))
+                .andExpect(jsonPath("$.questions[*].questionKey", hasItem("TECH_CHILDREN_" + awsId)))
+                .andExpect(jsonPath("$.questions[*].questionKey", hasItem("EDUCATION_LEVEL")))
+                .andReturn();
+
+        List<Map<String, Object>> questions = JsonPath.read(
+                formResult.getResponse().getContentAsString(), "$.questions");
+        StringBuilder answers = new StringBuilder("{\"answers\":[");
+        boolean first = true;
+        for (Map<String, Object> question : questions) {
+            String key = String.valueOf(question.get("questionKey"));
+            String type = String.valueOf(question.get("type"));
+            @SuppressWarnings("unchecked")
+            List<String> options = (List<String>) question.get("options");
+            String answer = switch (key) {
+                case "FULL_NAME" -> "Perfil Enriquecido";
+                case "AGE" -> "30";
+                case "ROLE" -> "Desenvolvedor";
+                case "EMAIL" -> "perfil.enriquecido@example.com";
+                case "PHONE" -> "+351 912 345 678";
+                case "LINKEDIN_URL" -> "https://www.linkedin.com/in/perfil";
+                case "SALARY_EXPECTATION" -> "9000";
+                case "WORK_MODEL" -> "REMOTE; HYBRID";
+                case "EDUCATION_LEVEL" -> "BACHELORS";
+                case "ENGLISH_LEVEL" -> "ADVANCED";
+                case "TECH_CATEGORY_LANGUAGE" -> "Java";
+                default -> {
+                    if (key.startsWith("TECH_CHILDREN_")) {
+                        yield "S3; Lambda";
+                    }
+                    if (Boolean.TRUE.equals(question.get("required"))) {
+                        if ("NUMBER".equals(type)) {
+                            yield "1";
+                        }
+                        yield options.isEmpty() ? "Sim" : options.get(0);
+                    }
+                    yield null;
+                }
+            };
+            if (answer == null) {
+                continue;
+            }
+            if (!first) {
+                answers.append(',');
+            }
+            first = false;
+            answers.append("{\"questionId\":").append(question.get("id"))
+                    .append(",\"answer\":\"").append(answer).append("\"}");
+        }
+        answers.append("]}");
+
+        MvcResult applied = mockMvc.perform(
+                        multipart("/api/v1/job-positions/{jobId}/applications", jobId)
+                                .file(jsonCandidate("Perfil Enriquecido", "perfil.enriquecido@example.com", kotlinId))
+                                .file(pdfFile())
+                        .file(consentFile())
+                                .file(new MockMultipartFile("answers", "", MediaType.APPLICATION_JSON_VALUE,
+                                        answers.toString().getBytes(StandardCharsets.UTF_8)))
+                                .with(user("recruiter").roles("TECH_RECRUITER"))
+                                .with(csrf()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.application.adherence.percentage").isNumber())
+                .andExpect(jsonPath("$.application.adherence.criteria[0].key").value("TECHNOLOGIES"))
+                .andExpect(jsonPath("$.application.adherence.criteria[0].percentage").value(100))
+                .andReturn();
+
+        Number candidateId = JsonPath.read(
+                applied.getResponse().getContentAsString(), "$.application.candidate.id");
+        Number selectionProcessId = JsonPath.read(
+                applied.getResponse().getContentAsString(), "$.selectionProcessId");
+
+        mockMvc.perform(get("/api/v1/selection-processes/{id}", selectionProcessId.longValue())
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidates[*].answers[*].questionKey", hasItem("WORK_MODEL")))
+                .andExpect(jsonPath("$.candidates[*].answers[*].questionKey", hasItem("EDUCATION_LEVEL")))
+                .andExpect(jsonPath("$.candidates[0].adherence.percentage").isNumber())
+                .andExpect(jsonPath("$.candidates[0].adherence.criteria[0].key").value("TECHNOLOGIES"))
+                .andExpect(jsonPath("$.candidates[0].adherence.criteria[0].percentage").value(100))
+                .andExpect(jsonPath("$.candidates[0].candidate.technologies[*].name", hasItem("AWS")))
+                .andExpect(jsonPath("$.candidates[0].adherence.criteria[*].key", hasItem("WORK_MODEL")));
+
+        mockMvc.perform(get("/api/v1/candidates/{id}", candidateId.longValue())
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.educationLevel").value("BACHELORS"))
+                .andExpect(jsonPath("$.englishLevel").value("ADVANCED"))
+                .andExpect(jsonPath("$.technologies[*].name", hasItem("Java")))
+                .andExpect(jsonPath("$.technologies[*].name", hasItem("Kotlin")))
+                .andExpect(jsonPath("$.technologies[*].name", hasItem("S3")))
+                .andExpect(jsonPath("$.technologies[*].name", hasItem("Lambda")));
+    }
+
+    @Test
+    void applicationRequiresPrivacyConsent() throws Exception {
+        long clientId = createClient("11222333000912", "CLI-010");
+        long jobId = createJob("Vaga LGPD", clientId);
+
+        mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
+                        .file(jsonCandidate("Sem Consentimento", "sem.consentimento@example.com"))
+                        .file(pdfFile())
+                        .file(answersFile(jobId, "Sem Consentimento", "sem.consentimento@example.com"))
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("É obrigatório aceitar a Política de Privacidade para enviar a candidatura."));
     }
 
     @Test
@@ -295,43 +449,154 @@ class CandidateSelectionProcessIntegrationTest {
     }
 
     private long createJob(String title, long clientId) throws Exception {
+        return createJobWithTechnologies(title, clientId);
+    }
+
+    private long createJobWithTechnologies(String title, long clientId, long... technologyIds) throws Exception {
+        String ids = java.util.Arrays.stream(technologyIds)
+                .mapToObj(Long::toString)
+                .collect(java.util.stream.Collectors.joining(","));
         MvcResult result = mockMvc.perform(post("/api/v1/job-positions")
                         .with(user("admin").roles("ADMIN"))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"clientId":%d,"title":"%s","workModel":"REMOTE","contractType":"CLT","status":"OPEN"}
-                                """.formatted(clientId, title)))
+                                {"clientId":%d,"title":"%s","workModel":"REMOTE","contractType":"CLT",
+                                 "status":"OPEN","technologyIds":[%s]}
+                                """.formatted(clientId, title, ids)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.id")).longValue();
+    }
+
+    private long createTechnology(String name, String category, Long parentId) throws Exception {
+        String parent = parentId == null ? "null" : parentId.toString();
+        MvcResult result = mockMvc.perform(post("/api/v1/technologies")
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"%s","category":"%s","parentId":%s}
+                                """.formatted(name, category, parent)))
                 .andExpect(status().isCreated())
                 .andReturn();
         return ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.id")).longValue();
     }
 
     private MvcResult applyToProcess(long processId, String name, String email) throws Exception {
+        MvcResult process = mockMvc.perform(get("/api/v1/selection-processes/{id}", processId)
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andReturn();
+        Number jobId = JsonPath.read(process.getResponse().getContentAsString(), "$.jobPosition.id");
+
         return mockMvc.perform(multipart("/api/v1/selection-processes/{id}/candidates", processId)
                         .file(jsonCandidate(name, email))
                         .file(pdfFile())
+                        .file(consentFile())
+                        .file(answersFile(jobId.longValue(), name, email))
                         .with(user("recruiter").roles("TECH_RECRUITER"))
                         .with(csrf()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.selectionProcessId").isNumber())
                 .andExpect(jsonPath("$.application.resume.filename").value("curriculo.pdf"))
+                .andExpect(jsonPath("$.application.consent.accepted").value(true))
+                .andExpect(jsonPath("$.application.consent.version").value("1.0"))
+                .andExpect(jsonPath("$.application.consent.acceptedAt").isNotEmpty())
                 .andReturn();
+    }
+
+    private String answerForPrompt(List<Map<String, Object>> answers, String prompt) {
+        return answers.stream()
+                .filter(answer -> prompt.equals(answer.get("questionPrompt")))
+                .map(answer -> String.valueOf(answer.get("answer")))
+                .findFirst()
+                .orElse(null);
     }
 
     private MvcResult applyToJob(long jobId, String name, String email) throws Exception {
         return mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
                         .file(jsonCandidate(name, email))
                         .file(pdfFile())
+                        .file(consentFile())
+                        .file(answersFile(jobId, name, email))
                         .with(user("recruiter").roles("TECH_RECRUITER"))
                         .with(csrf()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.selectionProcessId").isNumber())
                 .andExpect(jsonPath("$.application.candidate.email").value(email))
+                .andExpect(jsonPath("$.application.consent.accepted").value(true))
+                .andExpect(jsonPath("$.application.consent.version").value("1.0"))
+                .andExpect(jsonPath("$.application.consent.acceptedAt").isNotEmpty())
                 .andReturn();
     }
 
+    private MockMultipartFile answersFile(long jobId, String name, String email) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/v1/job-positions/{jobId}/application-form", jobId)
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        List<Map<String, Object>> questions = JsonPath.read(
+                result.getResponse().getContentAsString(), "$.questions");
+        StringBuilder answers = new StringBuilder("{\"answers\":[");
+        boolean first = true;
+        for (Map<String, Object> question : questions) {
+            if (!Boolean.TRUE.equals(question.get("required"))) {
+                continue;
+            }
+            String key = String.valueOf(question.get("questionKey"));
+            String type = String.valueOf(question.get("type"));
+            @SuppressWarnings("unchecked")
+            List<String> options = (List<String>) question.get("options");
+            String answer = switch (key) {
+                case "FULL_NAME" -> name;
+                case "AGE" -> "30";
+                case "ROLE" -> "Desenvolvedora Java";
+                case "EMAIL" -> email;
+                case "PHONE" -> "+351 912 345 678";
+                default -> {
+                    if ("TEXT".equals(type) || "TEXTAREA".equals(type)) {
+                        yield "Resposta de teste";
+                    }
+                    if ("NUMBER".equals(type)) {
+                        yield "5000";
+                    }
+                    if ("YES_NO".equals(type)) {
+                        yield "Sim";
+                    }
+                    if ("MULTIPLE_CHOICE".equals(type)) {
+                        Object maxSelections = question.get("maxSelections");
+                        int limit = maxSelections instanceof Number number ? number.intValue() : 1;
+                        yield String.join("; ", options.stream().limit(limit).toList());
+                    }
+                    yield options.isEmpty() ? "" : options.get(0);
+                }
+            };
+            if (!first) {
+                answers.append(',');
+            }
+            first = false;
+            answers.append("{\"questionId\":").append(question.get("id"))
+                    .append(",\"answer\":\"").append(answer).append("\"}");
+        }
+        answers.append("]}");
+
+        return new MockMultipartFile("answers", "", MediaType.APPLICATION_JSON_VALUE,
+                answers.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
     private MockMultipartFile jsonCandidate(String name, String email) {
+        return jsonCandidate(name, email, new Long[0]);
+    }
+
+    private MockMultipartFile jsonCandidate(String name, String email, Long... technologyIds) {
+        String technologyIdList = java.util.Arrays.stream(technologyIds)
+                .map(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(","));
+        String technologyField = technologyIds.length == 0
+                ? ""
+                : ",\n  \"technologyIds\":[%s]".formatted(technologyIdList);
         String json = """
                 {
                   "name":"%s",
@@ -339,11 +604,19 @@ class CandidateSelectionProcessIntegrationTest {
                   "role":"Desenvolvedora Java",
                   "linkedinUrl":"https://www.linkedin.com/in/teste",
                   "email":"%s",
-                  "phone":"+351 912 345 678",
+                  "phone":"+351 912 345 678"%s,
                   "address":{"city":"Lisboa","state":"Lisboa","country":"Portugal"}
                 }
-                """.formatted(name, email);
+                """.formatted(name, email, technologyField);
         return new MockMultipartFile("candidate", "", MediaType.APPLICATION_JSON_VALUE,
+                json.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private MockMultipartFile consentFile() {
+        String json = """
+                {"accepted":true,"version":"1.0"}
+                """;
+        return new MockMultipartFile("consent", "", MediaType.APPLICATION_JSON_VALUE,
                 json.getBytes(StandardCharsets.UTF_8));
     }
 

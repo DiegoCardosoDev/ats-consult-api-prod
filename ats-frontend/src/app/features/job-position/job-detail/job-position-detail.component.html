@@ -172,9 +172,9 @@
                           (click)="openFormEditor()">
                     <i class="bi bi-pencil-square me-1"></i> Editar formulário
                   </button>
-                  <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3"
-                          (click)="removeApplicationForm()">
-                    <i class="bi bi-trash me-1"></i> Remover
+                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                          (click)="restoreDefaultApplicationForm()" [disabled]="isLoadingForm">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Restaurar padrão
                   </button>
                 } @else {
                   <button type="button" class="btn btn-sm btn-primary rounded-pill px-3"

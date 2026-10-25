@@ -15,5 +15,6 @@ public enum TechnologyCategoryEnum {
     ARCHITECTURE_STYLE,
     STORAGE,
     SERVERLESS,
+    VERSION_CONTROL,
     OTHER
 }

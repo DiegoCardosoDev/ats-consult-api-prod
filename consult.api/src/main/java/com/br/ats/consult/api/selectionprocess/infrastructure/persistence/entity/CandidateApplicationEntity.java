@@ -77,6 +77,19 @@ public class CandidateApplicationEntity {
     @Builder.Default
     private Set<CandidateApplicationCommentEntity> comments = new LinkedHashSet<>();
 
+    @Builder.Default
+    @Column(name = "consent_accepted", nullable = false)
+    private boolean consentAccepted = false;
+
+    @Column(name = "consent_accepted_at")
+    private Instant consentAcceptedAt;
+
+    @Column(name = "consent_version", length = 50)
+    private String consentVersion;
+
+    @Column(name = "consent_ip", length = 45)
+    private String consentIp;
+
     @CreationTimestamp
     @Column(name = "applied_at", nullable = false, updatable = false)
     private Instant appliedAt;
