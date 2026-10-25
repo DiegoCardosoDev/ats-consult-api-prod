@@ -1,0 +1,55 @@
+<div class="hero-section text-white position-relative min-vh-100 d-flex flex-column">
+  
+    <!-- Navbar Superior -->
+    <nav class="navbar navbar-expand-lg navbar-dark px-4 py-3 border-bottom border-white border-opacity-10">
+      <div class="container-fluid">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
+          <span class="logo-badge bg-primary px-2 py-1 rounded fs-6">TN</span> 
+          <span class="fs-5 tracking-wide">TN CONSULTORIA</span>
+        </a>
+  
+        <div class="d-flex align-items-center gap-3 ms-auto">
+          <a routerLink="/home" class="nav-link-custom active">Home</a>
+          <a routerLink="/jobs" class="nav-link-custom">Vagas</a>
+          <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
+          <a routerLink="/clients" class="nav-link-custom">Clientes</a>
+          <a routerLink="/processes" class="nav-link-custom">Processos</a>
+          <button (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
+        </div>
+      </div>
+    </nav>
+  
+    <!-- Conteúdo Principal (Hero) -->
+    <div class="container my-auto py-5">
+      <div class="row">
+        <div class="col-lg-8 col-xl-7">
+          
+          <span class="text-uppercase tracking-wider small fw-semibold text-info mb-3 d-block">
+            CONECTANDO TALENTOS & OPORTUNIDADES
+          </span>
+  
+          <h1 class="display-3 fw-bold mb-4 text-white lh-tight text-uppercase">
+            Transforme o seu processo seletivo
+          </h1>
+  
+          <p class="lead text-light opacity-85 mb-5 fs-5">
+            Centralize a publicação de vagas, gerencie candidatos com eficiência e construa equipes de alta performance com a nossa plataforma inteligente de recrutamento e seleção.
+          </p>
+  
+          <div class="d-flex flex-wrap gap-3">
+            <a routerLink="/jobs/new" class="btn btn-light btn-lg px-4 py-3 rounded-pill fw-bold text-dark shadow d-flex align-items-center gap-2 custom-hero-btn">
+              Cadastrar Nova Vaga <i class="bi bi-arrow-right"></i>
+            </a>
+            <a routerLink="/jobs" class="btn btn-outline-light btn-lg px-4 py-3 rounded-pill fw-semibold">
+              Ver Vagas
+            </a>
+            <a routerLink="/candidates" class="btn btn-outline-light btn-lg px-4 py-3 rounded-pill fw-semibold">
+              Pesquisar Candidatos
+            </a>
+          </div>
+  
+        </div>
+      </div>
+    </div>
+  
+  </div>

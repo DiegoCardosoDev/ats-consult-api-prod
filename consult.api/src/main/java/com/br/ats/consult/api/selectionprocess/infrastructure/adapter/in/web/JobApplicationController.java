@@ -16,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,13 +39,11 @@ public class JobApplicationController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApplyCandidateResponse> apply(
             @PathVariable Long jobId,
-            @RequestParam Long clientId,
             @RequestPart("candidate") @Valid CandidateRequest candidateRequest,
             @RequestPart("resume") MultipartFile resume,
             @RequestPart(value = "answers", required = false) @Valid FormAnswersRequest answersRequest) {
         CandidateApplicationResult result = applyCandidateUseCase.applyToJob(
                 jobId,
-                clientId,
                 candidateWebMapper.toDomain(candidateRequest),
                 toResumeUpload(resume),
                 toAnswerInputs(answersRequest)

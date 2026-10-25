@@ -1,0 +1,117 @@
+<div class="page-layout text-white min-vh-100 d-flex flex-column">
+  <nav class="navbar navbar-expand-lg navbar-dark px-4 py-3 border-bottom border-white border-opacity-10 bg-dark-header">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/home">
+        <span class="logo-badge bg-primary px-2 py-1 rounded fs-6">TN</span>
+        <span class="fs-5 tracking-wide">TN CONSULTORIA</span>
+      </a>
+      <div class="d-flex align-items-center gap-2 ms-auto flex-wrap justify-content-end">
+        <a routerLink="/home" class="nav-link-custom">Home</a>
+        <a routerLink="/jobs" class="nav-link-custom">Vagas</a>
+        <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
+        <a routerLink="/clients" class="nav-link-custom">Clientes</a>
+        <a routerLink="/processes" class="nav-link-custom active">Processos</a>
+        <button type="button" (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container-fluid px-3 px-lg-4 py-4 flex-grow-1">
+    <div class="process-detail-wrapper mx-auto">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <a routerLink="/processes" class="btn btn-outline-light rounded-pill px-4 d-inline-flex align-items-center gap-2">
+          <i class="bi bi-arrow-left"></i> Voltar aos Processos
+        </a>
+        @if (updatingApplicationId) {
+          <span class="status-saving">
+            <span class="spinner-border spinner-border-sm"></span> A atualizar fase...
+          </span>
+        }
+      </div>
+
+      @if (successMessage) {
+        <div class="alert alert-success border-0 shadow-sm">{{ successMessage }}</div>
+      }
+      @if (errorMessage && !showApplicationModal) {
+        <div class="alert alert-danger border-0 shadow-sm">{{ errorMessage }}</div>
+      }
+
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-light" role="status"></div>
+          <p class="mt-3 text-light opacity-75">A carregar processo seletivo...</p>
+        </div>
+      }
+
+      @if (!isLoading && process) {
+        <div class="card border-0 shadow-lg rounded-4 bg-white text-dark p-3 p-md-4 mb-3">
+          <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+            <div>
+              <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                <h2 class="fw-bold fs-2 mb-0">{{ process.jobPosition.title }}</h2>
+                <span class="badge rounded-pill px-3 py-2" [ngClass]="statusClass(process.status)">
+                  {{ statusLabel(process.status) }}
+                </span>
+              </div>
+              <div class="d-flex flex-wrap gap-3 small text-muted">
+                <span><i class="bi bi-building me-1 text-primary"></i><strong class="text-dark">Cliente:</strong> {{ process.client.name }} ({{ process.client.code }})</span>
+                <span><i class="bi bi-calendar3 me-1 text-primary"></i><strong class="text-dark">Abertura:</strong> {{ process.openedAt | date:'dd/MM/yyyy' }}</span>
+                <span><i class="bi bi-people me-1 text-primary"></i><strong class="text-dark">Candidatos:</strong> {{ process.candidates.length }}</span>
+              </div>
+            </div>
+            <div class="d-flex align-items-start">
+              <button type="button" class="btn btn-primary rounded-pill px-4 fw-semibold" (click)="openApplicationModal()">
+                <i class="bi bi-person-plus me-1"></i> Registar Candidatura
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-2">
+          <div>
+            <h5 class="fw-bold text-white mb-0">Quadro de Candidaturas</h5>
+            <p class="text-light opacity-75 small mb-0">Arraste os cards entre as fases para atualizar o estado do processo.</p>
+          </div>
+          <span class="kanban-legend">
+            <i class="bi bi-arrows-move"></i> Drag and drop ativo
+          </span>
+        </div>
+
+        @if (process.candidates.length === 0) {
+          <div class="card border-0 shadow-lg rounded-4 bg-white text-dark text-center p-5">
+            <i class="bi bi-kanban fs-1 text-primary mb-2"></i>
+            <h5 class="fw-bold">Nenhum candidato neste processo</h5>
+            <p class="text-muted mb-3">Registe a primeira candidatura para começar a movimentar o quadro Kanban.</p>
+            <button type="button" class="btn btn-primary rounded-pill px-4 mx-auto" (click)="openApplicationModal()">
+              Registar Candidatura
+            </button>
+          </div>
+        } @else {
+          <app-kanban-board
+            [applications]="process.candidates"
+            (statusChanged)="onStatusChanged($event)"
+            (cardSelected)="onCardSelected($event)">
+          </app-kanban-board>
+        }
+      }
+    </div>
+  </main>
+
+  @if (showApplicationModal && process) {
+    <app-candidate-application-modal
+      mode="process"
+      [targetId]="process.id"
+      [applicationForm]="applicationForm"
+      (closed)="closeApplicationModal()"
+      (applied)="onApplied($event)">
+    </app-candidate-application-modal>
+  }
+
+  @if (selectedApplication) {
+    <app-application-detail-modal
+      [application]="selectedApplication"
+      (closed)="closeApplicationDetails()"
+      (downloadRequested)="downloadResume($event)">
+    </app-application-detail-modal>
+  }
+</div>

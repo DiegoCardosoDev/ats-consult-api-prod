@@ -17,6 +17,9 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record JobPositionRequest(
+        @NotNull(message = "O cliente da vaga é obrigatório")
+        @Positive(message = "O cliente deve ter um identificador válido")
+        Long clientId,
         @NotBlank(message = "O título da vaga é obrigatório")
         @Size(max = 255, message = "O título não pode exceder 255 caracteres")
         String title,

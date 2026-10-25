@@ -1,5 +1,8 @@
 package com.br.ats.consult.api.job.infrastructure.persistence.adapter;
 
+import com.br.ats.consult.api.client.domain.exception.ClientNotFoundException;
+import com.br.ats.consult.api.client.infrastructure.persistence.entity.ClientEntity;
+import com.br.ats.consult.api.client.infrastructure.persistence.repository.SpringDataClientRepository;
 import com.br.ats.consult.api.job.domain.exception.JobPositionNotFoundException;
 import com.br.ats.consult.api.job.domain.model.JobPosition;
 import com.br.ats.consult.api.job.domain.port.out.JobPositionGateway;
@@ -27,12 +30,16 @@ import java.util.stream.Collectors;
 public class JobPositionRepositoryAdapter implements JobPositionGateway {
 
     private final SpringDataJobPositionRepository repository;
+    private final SpringDataClientRepository clientRepository;
     private final JobPositionMapper mapper;
     private final TechnologyGateway technologyGateway;
 
-    public JobPositionRepositoryAdapter(SpringDataJobPositionRepository repository, JobPositionMapper mapper,
+    public JobPositionRepositoryAdapter(SpringDataJobPositionRepository repository,
+                                        SpringDataClientRepository clientRepository,
+                                        JobPositionMapper mapper,
                                         TechnologyGateway technologyGateway) {
         this.repository = repository;
+        this.clientRepository = clientRepository;
         this.mapper = mapper;
         this.technologyGateway = technologyGateway;
     }
@@ -40,6 +47,7 @@ public class JobPositionRepositoryAdapter implements JobPositionGateway {
     @Override
     public JobPosition save(JobPosition jobPosition) {
         JobPositionEntity entity = mapper.toEntity(jobPosition);
+        entity.setClient(resolveClient(jobPosition));
         JobPositionEntity savedEntity = repository.save(entity);
         return toDomainList(List.of(savedEntity)).get(0);
     }
@@ -50,6 +58,7 @@ public class JobPositionRepositoryAdapter implements JobPositionGateway {
                 .orElseThrow(() -> new JobPositionNotFoundException(id));
         JobPositionEntity mapped = mapper.toEntity(jobPosition);
 
+        entity.setClient(resolveClient(jobPosition));
         entity.setTitle(mapped.getTitle());
         entity.setDescription(mapped.getDescription());
         entity.setStatus(mapped.getStatus());
@@ -87,6 +96,14 @@ public class JobPositionRepositoryAdapter implements JobPositionGateway {
     @Override
     public void delete(Long id) {
         repository.deleteById(id);
+    }
+
+    private ClientEntity resolveClient(JobPosition jobPosition) {
+        if (jobPosition.getClient() == null || jobPosition.getClient().getId() == null) {
+            throw new IllegalArgumentException("O cliente da vaga é obrigatório.");
+        }
+        return clientRepository.findById(jobPosition.getClient().getId())
+                .orElseThrow(() -> new ClientNotFoundException(jobPosition.getClient().getId()));
     }
 
     private Page<JobPosition> toDomainPage(Page<JobPositionEntity> page, Pageable pageable) {

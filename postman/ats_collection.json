@@ -1,0 +1,1013 @@
+{
+  "info": {
+    "_postman_id": "c1a9f4d2-7b6e-4c3a-9f21-8d0e6b7a5c42",
+    "name": "ATS TN Consultoria",
+    "description": "Collection da API do ATS (consult.api).\n\nComo usar:\n1. Ajuste `base_url` (padrão http://localhost:8080).\n2. Execute `Autenticação > Login` com um usuário ADMIN ou TECH_RECRUITER. O token é extraído do cookie `auth_token`.\n3. Execute as pastas na ordem: Clientes, Tecnologias, Vagas, Formulário, Processos, Candidaturas/Kanban e Comentários.\n4. As variáveis de ID são preenchidas automaticamente pelos testes das requisições de criação.\n\nAutenticação: cookie HttpOnly `auth_token` (Postman mantém o cookie automaticamente). A collection também define Authorization Bearer com a variável `token`, aceita pelo backend como fallback.\n\nCSRF: habilitado em produção. Execute `Autenticação > CSRF` antes das escritas. Em desenvolvimento (`spring.profiles.active=dev`) o CSRF está desabilitado.\n\nUploads: nas requisições multipart, selecione um arquivo PDF real no campo `resume` (o placeholder `/path/to/resume.pdf` não existe por padrão).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const method = pm.request.method.toUpperCase();",
+          "if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {",
+          "  try {",
+          "    const xsrf = pm.cookies.get('XSRF-TOKEN');",
+          "    if (xsrf) {",
+          "      pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: decodeURIComponent(xsrf) });",
+          "    }",
+          "  } catch (e) {",
+          "    console.warn('Não foi possível ler o cookie CSRF:', e.message);",
+          "  }",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Sem erro 5xx', function () {",
+          "  pm.expect(pm.response.code).to.be.below(500);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "admin_email", "value": "admin@tnconsultoria.com", "type": "string" },
+    { "key": "admin_password", "value": "123456", "type": "string" },
+    { "key": "client_id", "value": "1", "type": "string" },
+    { "key": "technology_id", "value": "1", "type": "string" },
+    { "key": "candidate_id", "value": "1", "type": "string" },
+    { "key": "job_position_id", "value": "1", "type": "string" },
+    { "key": "form_question_id", "value": "1", "type": "string" },
+    { "key": "selection_process_id", "value": "1", "type": "string" },
+    { "key": "application_id", "value": "1", "type": "string" },
+    { "key": "comment_id", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Autenticação",
+      "description": "Login por cookie e suporte a CSRF.",
+      "item": [
+        {
+          "name": "CSRF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('CSRF gerado (204)', function () {",
+                  "  pm.expect(pm.response.code).to.eql(204);",
+                  "});",
+                  "const xsrf = pm.cookies.get('XSRF-TOKEN');",
+                  "if (xsrf) {",
+                  "  console.log('Cookie XSRF-TOKEN disponível para o pre-request script.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/csrf",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "csrf"]
+            },
+            "description": "Gera o cookie XSRF-TOKEN. Necessário quando CSRF_ENABLED=true."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login efetuado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "let cookieToken = null;",
+                  "try { cookieToken = pm.cookies.get('auth_token'); } catch (e) { cookieToken = null; }",
+                  "if (!cookieToken) {",
+                  "  const setCookie = pm.response.headers.get('Set-Cookie') || '';",
+                  "  const match = setCookie.match(/auth_token=([^;]+)/);",
+                  "  if (match) { cookieToken = match[1]; }",
+                  "}",
+                  "if (cookieToken) {",
+                  "  pm.collectionVariables.set('token', cookieToken);",
+                  "  pm.test('Token extraído do cookie', function () {",
+                  "    pm.expect(cookieToken.length).to.be.above(20);",
+                  "  });",
+                  "} else {",
+                  "  console.warn('Token não encontrado no Set-Cookie; verifique o cookie auth_token no Postman.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Autentica e devolve Set-Cookie auth_token (HttpOnly)."
+          },
+          "response": []
+        },
+        {
+          "name": "Registar usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registo criado', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"novo.usuario.{{$timestamp}}@example.com\",\n  \"password\": \"senhaSegura123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Cria usuário com papel USER e devolve cookie de autenticação."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Logout efetuado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.collectionVariables.set('token', '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Invalida o token atual e limpa o cookie."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "description": "Cadastro e consulta de clientes.",
+      "item": [
+        {
+          "name": "Criar cliente",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cnpj = Array.from({ length: 14 }, () => Math.floor(Math.random() * 10)).join('');",
+                  "pm.variables.set('generated_cnpj', cnpj);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cliente criado', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.id) { pm.collectionVariables.set('client_id', String(data.id)); }",
+                  "pm.test('Resposta contém cliente', function () {",
+                  "  pm.expect(data).to.have.property('id');",
+                  "  pm.expect(data).to.have.property('name');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cliente Postman {{$timestamp}}\",\n  \"cnpj\": \"{{generated_cnpj}}\",\n  \"code\": \"CLI-{{$timestamp}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients"]
+            },
+            "description": "Cria cliente. Salva o ID em `client_id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar cliente por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/{{client_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients", "{{client_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tecnologias",
+      "description": "Catálogo de tecnologias usado pelas vagas.",
+      "item": [
+        {
+          "name": "Criar tecnologia",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tecnologia criada', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.id) { pm.collectionVariables.set('technology_id', String(data.id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Java {{$timestamp}}\",\n  \"category\": \"LANGUAGE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/technologies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "technologies"]
+            },
+            "description": "Cria tecnologia. Salva o ID em `technology_id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar tecnologias",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/technologies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "technologies"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar tecnologia por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/technologies/{{technology_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "technologies", "{{technology_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar tecnologias filhas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/technologies/parent/{{technology_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "technologies", "parent", "{{technology_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vagas",
+      "description": "CRUD de vagas. Toda vaga exige clientId.",
+      "item": [
+        {
+          "name": "Criar vaga",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Vaga criada', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.id) { pm.collectionVariables.set('job_position_id', String(data.id)); }",
+                  "pm.test('Vaga possui cliente', function () {",
+                  "  pm.expect(data.client).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": {{client_id}},\n  \"title\": \"Backend Developer Postman {{$timestamp}}\",\n  \"description\": \"Vaga criada pela collection Postman.\",\n  \"status\": \"OPEN\",\n  \"workModel\": \"REMOTE\",\n  \"minSalary\": 3000,\n  \"maxSalary\": 6000,\n  \"location\": { \"city\": \"Lisboa\", \"state\": \"Lisboa\", \"country\": \"Portugal\" },\n  \"contractType\": \"CLT\",\n  \"educationLevel\": \"BACHELORS\",\n  \"englishLevel\": \"INTERMEDIATE\",\n  \"technologyIds\": [{{technology_id}}]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/job-positions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "job-positions"]
+            },
+            "description": "Cria vaga OPEN. Salva o ID em `job_position_id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar vagas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/job-positions?page=0&size=20&sort=id,desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "job-positions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "id,desc" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar vaga por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "job-positions", "{{job_position_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar vaga",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Vaga atualizada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": {{client_id}},\n  \"title\": \"Backend Developer Postman (atualizada)\",\n  \"description\": \"Vaga atualizada pela collection Postman.\",\n  \"status\": \"OPEN\",\n  \"workModel\": \"HYBRID\",\n  \"minSalary\": 3500,\n  \"maxSalary\": 7000,\n  \"location\": { \"city\": \"Lisboa\", \"state\": \"Lisboa\", \"country\": \"Portugal\" },\n  \"contractType\": \"CLT\",\n  \"educationLevel\": \"BACHELORS\",\n  \"englishLevel\": \"ADVANCED\",\n  \"technologyIds\": [{{technology_id}}]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "job-positions", "{{job_position_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Candidatos",
+      "description": "Cadastro e busca de candidatos.",
+      "item": [
+        {
+          "name": "Criar candidato",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Criado ou e-mail já existente', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.id) { pm.collectionVariables.set('candidate_id', String(data.id)); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Candidato Postman\",\n  \"age\": 30,\n  \"role\": \"Backend Developer\",\n  \"linkedinUrl\": \"https://www.linkedin.com/in/candidato-postman\",\n  \"email\": \"candidato.fixo.postman@example.com\",\n  \"phone\": \"+351912345678\",\n  \"address\": {\n    \"street\": \"Rua A\",\n    \"number\": \"10\",\n    \"complement\": \"\",\n    \"neighborhood\": \"Centro\",\n    \"city\": \"Lisboa\",\n    \"state\": \"Lisboa\",\n    \"zipCode\": \"1000-000\",\n    \"country\": \"Portugal\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/candidates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "candidates"]
+            },
+            "description": "Cria candidato. Se o e-mail já existir, retorna 409 (esperado)."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar candidatos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/candidates?name=Postman&page=0&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "candidates"],
+              "query": [
+                { "key": "name", "value": "Postman" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar candidato por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/candidates/{{candidate_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "candidates", "{{candidate_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Formulário da vaga",
+      "description": "Formulário de perguntas aplicado às candidaturas da vaga.",
+      "item": [
+        {
+          "name": "Salvar formulário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Formulário salvo', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.questions && data.questions.length > 0) {",
+                  "  pm.collectionVariables.set('form_question_id', String(data.questions[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Perguntas do processo\",\n  \"description\": \"Formulário criado pela collection Postman.\",\n  \"active\": true,\n  \"questions\": [\n    {\n      \"prompt\": \"Possui experiência com Java?\",\n      \"type\": \"YES_NO\",\n      \"required\": true,\n      \"options\": [],\n      \"position\": 1\n    },\n    {\n      \"prompt\": \"Quantos anos de experiência?\",\n      \"type\": \"NUMBER\",\n      \"required\": false,\n      \"options\": [],\n      \"position\": 2\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}/application-form",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "job-positions", "{{job_position_id}}", "application-form"]
+            },
+            "description": "Cria/atualiza o formulário ativo da vaga. Salva o ID da primeira pergunta em `form_question_id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar formulário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 com formulário ou 204 sem formulário', function () {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}/application-form",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "job-positions", "{{job_position_id}}", "application-form"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Processos seletivos",
+      "description": "Criação e consulta de processos, além de candidatura direta no processo.",
+      "item": [
+        {
+          "name": "Criar processo seletivo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Processo criado', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.id) { pm.collectionVariables.set('selection_process_id', String(data.id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": {{client_id}},\n  \"jobPositionId\": {{job_position_id}},\n  \"status\": \"OPEN\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/selection-processes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "selection-processes"]
+            },
+            "description": "O clientId deve ser o mesmo cliente da vaga. Salva `selection_process_id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar processos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/selection-processes?page=0&size=20&sort=openedAt,desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "selection-processes"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "openedAt,desc" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar processo por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/selection-processes/{{selection_process_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "selection-processes", "{{selection_process_id}}"]
+            },
+            "description": "Retorna cliente, vaga, status, candidaturas, respostas, status Kanban e comentários."
+          },
+          "response": []
+        },
+        {
+          "name": "Candidatar ao processo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Candidatura criada', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.selectionProcessId) { pm.collectionVariables.set('selection_process_id', String(data.selectionProcessId)); }",
+                  "if (data.application && data.application.id) { pm.collectionVariables.set('application_id', String(data.application.id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "candidate",
+                  "type": "text",
+                  "contentType": "application/json",
+                  "value": "{\n  \"name\": \"Candidato Processo {{$timestamp}}\",\n  \"age\": 28,\n  \"role\": \"Backend Developer\",\n  \"linkedinUrl\": \"https://www.linkedin.com/in/candidato-processo\",\n  \"email\": \"candidato.processo.{{$timestamp}}.{{$randomInt}}@example.com\",\n  \"phone\": \"+351913333333\",\n  \"address\": {\n    \"street\": \"Rua B\",\n    \"number\": \"20\",\n    \"neighborhood\": \"Centro\",\n    \"city\": \"Lisboa\",\n    \"state\": \"Lisboa\",\n    \"zipCode\": \"1000-001\",\n    \"country\": \"Portugal\"\n  }\n}"
+                },
+                {
+                  "key": "resume",
+                  "type": "file",
+                  "src": "/path/to/resume.pdf"
+                },
+                {
+                  "key": "answers",
+                  "type": "text",
+                  "contentType": "application/json",
+                  "value": "{\n  \"answers\": [\n    { \"questionId\": {{form_question_id}}, \"answer\": \"Sim\" }\n  ]\n}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/selection-processes/{{selection_process_id}}/candidates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "selection-processes", "{{selection_process_id}}", "candidates"]
+            },
+            "description": "Multipart: candidate (JSON), resume (PDF) e answers (JSON opcional). Selecione um PDF real."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Candidaturas / Kanban",
+      "description": "Candidatura por vaga, download de currículo e movimentação no Kanban.",
+      "item": [
+        {
+          "name": "Candidatar à vaga",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Candidatura criada', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.selectionProcessId) { pm.collectionVariables.set('selection_process_id', String(data.selectionProcessId)); }",
+                  "if (data.application && data.application.id) { pm.collectionVariables.set('application_id', String(data.application.id)); }",
+                  "if (data.application) {",
+                  "  pm.test('Status inicial é TRIAGEM', function () {",
+                  "    pm.expect(data.application.status).to.eql('TRIAGEM');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "candidate",
+                  "type": "text",
+                  "contentType": "application/json",
+                  "value": "{\n  \"name\": \"Candidato Vaga {{$timestamp}}\",\n  \"age\": 32,\n  \"role\": \"Backend Developer\",\n  \"linkedinUrl\": \"https://www.linkedin.com/in/candidato-vaga\",\n  \"email\": \"candidato.vaga.{{$timestamp}}.{{$randomInt}}@example.com\",\n  \"phone\": \"+351914444444\",\n  \"address\": {\n    \"street\": \"Rua C\",\n    \"number\": \"30\",\n    \"neighborhood\": \"Centro\",\n    \"city\": \"Lisboa\",\n    \"state\": \"Lisboa\",\n    \"zipCode\": \"1000-002\",\n    \"country\": \"Portugal\"\n  }\n}"
+                },
+                {
+                  "key": "resume",
+                  "type": "file",
+                  "src": "/path/to/resume.pdf"
+                },
+                {
+                  "key": "answers",
+                  "type": "text",
+                  "contentType": "application/json",
+                  "value": "{\n  \"answers\": [\n    { \"questionId\": {{form_question_id}}, \"answer\": \"Sim\" }\n  ]\n}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/job-positions/{{job_position_id}}/applications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "job-positions", "{{job_position_id}}", "applications"]
+            },
+            "description": "Candidatura por vaga; o cliente é herdado da vaga. Reutiliza processo OPEN do mesmo cliente/vaga. Salva `application_id` e `selection_process_id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Descarregar currículo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('PDF retornado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/applications/{{application_id}}/resume",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "applications", "{{application_id}}", "resume"]
+            },
+            "description": "Download do PDF (Content-Disposition: attachment)."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar status (Kanban)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status atualizado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "pm.test('Novo status aplicado', function () {",
+                  "  pm.expect(data.status).to.eql('ENTREVISTA_TECH_RECRUITER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ENTREVISTA_TECH_RECRUITER\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/applications/{{application_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "applications", "{{application_id}}", "status"]
+            },
+            "description": "Move o card no Kanban. Requer ADMIN ou TECH_RECRUITER. Valores aceitos: TRIAGEM, ENTRAR_EM_CONTATO, ENTREVISTA_TECH_RECRUITER, APROVADO_ENTREVISTA_CLIENTE, APROVADO_CLIENTE, REPROVADO, DECLINOU, STAND_BY."
+          },
+          "response": []
+        },
+        {
+          "name": "Mover para Stand By",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Stand By aplicado ou erro de validação', function () {",
+                  "  pm.expect([200, 400, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"STAND_BY\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/applications/{{application_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "applications", "{{application_id}}", "status"]
+            },
+            "description": "Exemplo adicional de movimentação para STAND_BY."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Comentários",
+      "description": "Histórico e criação de comentários auditados por candidatura.",
+      "item": [
+        {
+          "name": "Listar comentários",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lista retornada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/applications/{{application_id}}/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "applications", "{{application_id}}", "comments"]
+            },
+            "description": "Comentários ordenados do mais recente para o mais antigo."
+          },
+          "response": []
+        },
+        {
+          "name": "Adicionar comentário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Comentário criado', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.id) { pm.collectionVariables.set('comment_id', String(data.id)); }",
+                  "pm.test('Comentário tem autor e data', function () {",
+                  "  pm.expect(data).to.have.property('authorEmail');",
+                  "  pm.expect(data).to.have.property('createdAt');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Comentário criado pela collection Postman em {{$isoTimestamp}}.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/applications/{{application_id}}/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "applications", "{{application_id}}", "comments"]
+            },
+            "description": "Cria comentário. O autor é extraído do usuário autenticado; limite de 2000 caracteres."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Observabilidade",
+      "description": "Endpoints públicos de saúde.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

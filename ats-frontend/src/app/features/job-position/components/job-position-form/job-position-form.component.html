@@ -1,0 +1,265 @@
+<div class="page-layout text-white min-vh-100 d-flex flex-column">
+  
+  <!-- Header Padrão Corporativo -->
+  <nav class="navbar navbar-expand-lg navbar-dark px-4 py-3 border-bottom border-white border-opacity-10 bg-dark-header">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/">
+        <span class="logo-badge bg-primary px-2 py-1 rounded fs-6">TN</span> 
+        <span class="fs-5 tracking-wide">TN CONSULTORIA</span>
+      </a>
+
+      <div class="d-flex align-items-center gap-3 ms-auto">
+        <a routerLink="/home" class="nav-link-custom">Home</a>
+        <a routerLink="/jobs/new" class="nav-link-custom active">Cadastrar Vaga</a>
+        <a routerLink="/jobs" class="nav-link-custom">Vagas</a>
+        <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
+        <a routerLink="/clients" class="nav-link-custom">Clientes</a>
+        <a routerLink="/processes" class="nav-link-custom">Processos</a>
+        <button type="button" (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Conteúdo Principal com Formulário -->
+  <main class="container py-5 flex-grow-1">
+    <div class="form-wrapper mx-auto">
+      
+      <!-- Cabeçalho da Seção -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="fw-bold text-white mb-1">Cadastrar Nova Vaga</h2>
+          <p class="text-light opacity-75 small mb-0">Preencha as informações detalhadas para publicar uma nova oportunidade.</p>
+        </div>
+      </div>
+
+      <!-- Banner de Sucesso Moderno (@if) -->
+      @if (successMessage) {
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center" role="alert">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-check-circle-fill fs-5 me-2"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+          <button type="button" class="btn-close ms-auto" (click)="successMessage = ''" aria-label="Close"></button>
+        </div>
+      }
+
+      <!-- Banner de Erro Moderno (@if) -->
+      @if (errorMessage) {
+        <div class="alert alert-danger border-0 shadow-sm mb-4">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+        </div>
+      }
+
+      <!-- Formulário em Card Moderno -->
+      <form [formGroup]="jobForm" (ngSubmit)="onSubmit()" class="card border-0 shadow-lg p-4 p-md-5 rounded-4 bg-white text-dark">
+        
+        <!-- Seção 1: Informações Gerais -->
+        <div class="mb-4">
+          <h5 class="section-title fw-semibold text-primary mb-3">Informações Principais</h5>
+
+          <!-- Cliente da Vaga -->
+          <div class="mb-3">
+            <label class="form-label fw-medium text-dark">Cliente <span class="text-danger">*</span></label>
+            <select formControlName="clientId" class="form-select custom-input">
+              <option [ngValue]="null">Selecione o cliente da vaga...</option>
+              @for (client of clients; track client.id) {
+                <option [ngValue]="client.id">{{ client.name }} ({{ client.code }})</option>
+              }
+            </select>
+            @if (clients.length === 0) {
+              <div class="form-text text-danger">
+                Nenhum cliente disponível. <a routerLink="/clients">Crie um cliente</a> antes de cadastrar a vaga.
+              </div>
+            }
+            @if (jobForm.get('clientId')?.touched && jobForm.get('clientId')?.invalid) {
+              <div class="text-danger small mt-1 ms-1">Selecione o cliente da vaga.</div>
+            }
+          </div>
+
+          <!-- Título da Vaga -->
+          <div class="mb-3">
+            <label class="form-label fw-medium text-dark">Título da Vaga <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              formControlName="title" 
+              class="form-control form-control-lg custom-input" 
+              placeholder="Ex: Senior Backend Developer (Java / Spring Boot)">
+            
+            @if (jobForm.get('title')?.touched && jobForm.get('title')?.invalid) {
+              <div class="text-danger small mt-1 ms-1">
+                O título é obrigatório (mínimo de 3 caracteres).
+              </div>
+            }
+          </div>
+
+          <!-- Descrição -->
+          <div class="mb-3">
+            <label class="form-label fw-medium text-dark">Descrição & Requisitos</label>
+            <textarea 
+              formControlName="description" 
+              rows="4" 
+              class="form-control custom-input" 
+              placeholder="Descreva as principais responsabilidades, competências técnicas e diferenciais..."></textarea>
+          </div>
+
+          <div class="row g-3">
+            <!-- Status -->
+            <div class="col-md-6">
+              <label class="form-label fw-medium text-dark">Status da Vaga <span class="text-danger">*</span></label>
+              <select formControlName="status" class="form-select custom-input">
+                <option value="OPEN">🟢 Aberta (OPEN)</option>
+                <option value="DRAFT">🟡 Rascunho (DRAFT)</option>
+                <option value="PAUSED">🟠 Pausada (PAUSED)</option>
+                <option value="CLOSED">🔴 Fechada (CLOSED)</option>
+              </select>
+            </div>
+
+            <!-- Modelo de Trabalho -->
+            <div class="col-md-6">
+              <label class="form-label fw-medium text-dark">Modelo de Trabalho <span class="text-danger">*</span></label>
+              <select formControlName="workModel" class="form-select custom-input">
+                <option value="HYBRID">🏢 Híbrido (HYBRID)</option>
+                <option value="REMOTE">🌐 Remoto (REMOTE)</option>
+                <option value="ON_SITE">📍 Presencial (ON_SITE)</option>
+              </select>
+            </div>
+            <!-- Modelo de Contrato 👈 NOVO CAMPO -->
+            <div class="col-md-4">
+              <label class="form-label fw-medium text-dark">Modelo de Contrato <span class="text-danger">*</span></label>
+              <select formControlName="contractType" class="form-select custom-input">
+                <option value="CLT">📄 CLT</option>
+                <option value="PJ">💼 PJ</option>
+                <option value="CLT_OR_PJ">📄/💼 CLT ou PJ</option>
+                <option value="FREELANCE">🚀 Freelance</option>
+                <option value="INTERNSHIP">🎓 Estágio</option>
+                <option value="TEMPORARY">⏳ Temporário</option>
+              </select>
+            </div>
+            <div class="row g-3 mt-3">
+              <!-- Formação Exigida -->
+              <div class="col-md-6">
+                <label class="form-label fw-medium text-dark">Formação Exigida</label>
+                <select formControlName="educationLevel" class="form-select custom-input">
+                  <option [value]="null">Selecione a formação...</option>
+                  <option value="HIGH_SCHOOL">Ensino Médio</option>
+                  <option value="ASSOCIATE">Tecnólogo / Superior Curto</option>
+                  <option value="BACHELORS">Superior Completo (Graduação)</option>
+                  <option value="SPECIALIZATION">Pós-graduação / Especialização</option>
+                  <option value="MASTERS">Mestrado</option>
+                  <option value="DOCTORATE">Doutorado</option>
+                </select>
+              </div>
+            
+              <!-- Nível de Inglês -->
+              <div class="col-md-6">
+                <label class="form-label fw-medium text-dark">Nível de Inglês</label>
+                <select formControlName="englishLevel" class="form-select custom-input">
+                  <option [value]="null">Selecione o nível de inglês...</option>
+                  <option value="NONE">Não Exigido</option>
+                  <option value="BASIC">Básico</option>
+                  <option value="INTERMEDIATE">Intermediário</option>
+                  <option value="ADVANCED">Avançado</option>
+                  <option value="FLUENT">Fluente</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4 text-muted opacity-25">
+
+        <!-- Seção 2: Remuneração e Localização -->
+        <div class="mb-4">
+          <h5 class="section-title fw-semibold text-primary mb-3">Faixa Salarial & Localização</h5>
+          
+          <div class="row g-3 mb-4">
+            <!-- Salário Mínimo -->
+            <div class="col-md-6">
+              <label class="form-label fw-medium text-dark">Salário Mínimo (R$)</label>
+              <div class="input-group">
+                <span class="input-group-text custom-addon bg-light border-end-0">R$</span>
+                <input type="number" formControlName="minSalary" class="form-control custom-input border-start-0" placeholder="10.000">
+              </div>
+            </div>
+
+            <!-- Salário Máximo -->
+            <div class="col-md-6">
+              <label class="form-label fw-medium text-dark">Salário Máximo (R$)</label>
+              <div class="input-group">
+                <span class="input-group-text custom-addon bg-light border-end-0">R$</span>
+                <input type="number" formControlName="maxSalary" class="form-control custom-input border-start-0" placeholder="15.000">
+              </div>
+            </div>
+          </div>
+
+          <!-- Localização Card -->
+          <div formGroupName="location" class="location-box p-3 p-md-4 rounded-3 bg-light border border-light-subtle">
+            <span class="fw-medium text-dark d-block mb-3">Endereço / Região</span>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Cidade</label>
+                <input type="text" formControlName="city" class="form-control custom-input bg-white" placeholder="Ex: Santo André">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Estado (UF)</label>
+                <input type="text" formControlName="state" class="form-control custom-input bg-white" placeholder="Ex: SP">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">País</label>
+                <input type="text" formControlName="country" class="form-control custom-input bg-white" placeholder="Ex: Brasil">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4 text-muted opacity-25">
+
+        <!-- Seção 3: Tecnologias (Chips) -->
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="section-title fw-semibold text-primary mb-0">Tecnologias Exigidas</h5>
+            <span class="badge bg-primary-subtle text-primary fw-medium rounded-pill px-3 py-2">
+              {{ selectedTechnologies.length }} Selecionadas
+            </span>
+          </div>
+
+          <div class="tech-chips-wrapper p-3 rounded-3 border bg-light-subtle">
+            <div class="d-flex flex-wrap gap-2">
+              @for (tech of technologies; track tech.id) {
+                <input 
+                  type="checkbox" 
+                  class="btn-check" 
+                  [id]="'tech-' + tech.id" 
+                  [value]="tech.id"
+                  [checked]="selectedTechnologies.includes(tech.id)"
+                  (change)="onTechToggle(tech.id, $event)"
+                  autocomplete="off">
+                <label 
+                  class="btn btn-outline-secondary tech-chip-btn rounded-pill px-3 py-2 d-flex align-items-center gap-1" 
+                  [for]="'tech-' + tech.id">
+                  <span>{{ tech.name }}</span>
+                  <span class="tech-category small opacity-75">({{ tech.category }})</span>
+                </label>
+              } @empty {
+                <div class="text-muted p-2 small">
+                  Carregando tecnologias disponíveis...
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Botão de Ação Principal -->
+        <div class="d-flex justify-content-end gap-3 mt-4">
+          <button type="submit" class="btn btn-primary btn-lg custom-submit-btn px-5 rounded-pill fw-semibold shadow-sm" [disabled]="jobForm.invalid || isLoading">
+            @if (isLoading) {
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            }
+            {{ isLoading ? 'Salvando...' : 'Salvar Vaga' }}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+</div>

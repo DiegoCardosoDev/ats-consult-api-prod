@@ -1,0 +1,139 @@
+<div class="application-drawer-backdrop" (click)="close()">
+  <aside class="application-drawer" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
+         aria-label="Detalhes da candidatura">
+    <header class="application-drawer__header">
+      <div class="application-drawer__person">
+        <span class="application-drawer__avatar">{{ application.candidate.name.charAt(0) }}</span>
+        <div>
+          <span class="application-drawer__eyebrow">Candidatura #{{ application.id }}</span>
+          <h4>{{ application.candidate.name }}</h4>
+          <p>{{ application.candidate.role }}</p>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="status-badge" [ngClass]="statusClass(application.status)">
+          {{ statusLabel(application.status) }}
+        </span>
+        <button type="button" class="btn-close" aria-label="Fechar" (click)="close()"></button>
+      </div>
+    </header>
+
+    <div class="application-drawer__body">
+      @if (errorMessage) {
+        <div class="alert alert-danger py-2 small border-0">{{ errorMessage }}</div>
+      }
+      @if (successMessage) {
+        <div class="alert alert-success py-2 small border-0">{{ successMessage }}</div>
+      }
+
+      <section class="drawer-section">
+        <div class="drawer-section__heading">
+          <h6><i class="bi bi-person-vcard"></i> Dados do candidato</h6>
+          <span class="drawer-section__tag">Candidatura {{ application.appliedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="contact-grid">
+          <div><span>E-mail</span><strong>{{ application.candidate.email }}</strong></div>
+          <div><span>Telefone</span><strong>{{ application.candidate.phone }}</strong></div>
+          <div><span>Idade</span><strong>{{ application.candidate.age }} anos</strong></div>
+          <div>
+            <span>LinkedIn</span>
+            @if (application.candidate.linkedinUrl) {
+              <a [href]="application.candidate.linkedinUrl" target="_blank" rel="noopener">Abrir perfil</a>
+            } @else {
+              <strong>Não informado</strong>
+            }
+          </div>
+          @if (application.candidate.address?.city) {
+            <div class="contact-grid__wide">
+              <span>Localização</span>
+              <strong>
+                {{ application.candidate.address?.city }}
+                @if (application.candidate.address?.state) {, {{ application.candidate.address?.state }}}
+                @if (application.candidate.address?.country) { - {{ application.candidate.address?.country }}}
+              </strong>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="drawer-section">
+        <div class="drawer-section__heading">
+          <h6><i class="bi bi-file-earmark-person"></i> Currículo</h6>
+        </div>
+        <div class="resume-row">
+          <div>
+            <i class="bi bi-file-earmark-pdf"></i>
+            <div>
+              <strong>{{ application.resume.filename }}</strong>
+              <span>{{ application.resume.sizeBytes / 1024 | number:'1.0-0' }} KB</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                  (click)="downloadResume()">
+            <i class="bi bi-download me-1"></i> Descarregar
+          </button>
+        </div>
+      </section>
+
+      @if (application.answers && application.answers.length > 0) {
+        <section class="drawer-section">
+          <div class="drawer-section__heading">
+            <h6><i class="bi bi-ui-checks"></i> Respostas do formulário</h6>
+          </div>
+          <div class="answer-list">
+            @for (answer of application.answers; track answer.questionId) {
+              <div class="answer-item">
+                <span>{{ answer.questionPrompt }}</span>
+                <strong>{{ answer.answer }}</strong>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <section class="drawer-section">
+        <div class="drawer-section__heading">
+          <h6><i class="bi bi-chat-left-text"></i> Comentários</h6>
+          <span class="drawer-section__tag">{{ comments.length }} no histórico</span>
+        </div>
+
+        <div class="comment-list">
+          @for (comment of comments; track comment.id) {
+            <article class="comment-item">
+              <div class="comment-item__avatar">{{ comment.authorEmail.charAt(0).toUpperCase() }}</div>
+              <div class="comment-item__body">
+                <div class="comment-item__header">
+                  <strong>{{ comment.authorEmail }}</strong>
+                  <span>{{ comment.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+                <p>{{ comment.message }}</p>
+              </div>
+            </article>
+          } @empty {
+            <div class="comment-empty">
+              <i class="bi bi-chat-square-dots"></i>
+              <span>Ainda não existem comentários nesta candidatura.</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <footer class="application-drawer__footer">
+      <form [formGroup]="commentForm" (ngSubmit)="submitComment()">
+        <label class="form-label small fw-semibold" for="application-comment">Novo comentário</label>
+        <textarea id="application-comment" class="form-control" rows="3" formControlName="message"
+                  maxlength="2000" placeholder="Escreva uma nota sobre esta candidatura..."></textarea>
+        <div class="comment-form__actions">
+          <span class="text-muted small">{{ messageLength }}/2000</span>
+          <button type="submit" class="btn btn-primary rounded-pill px-4" [disabled]="isSubmittingComment">
+            @if (isSubmittingComment) {
+              <span class="spinner-border spinner-border-sm me-2"></span>
+            }
+            <i class="bi bi-send me-1"></i> Comentar
+          </button>
+        </div>
+      </form>
+    </footer>
+  </aside>
+</div>

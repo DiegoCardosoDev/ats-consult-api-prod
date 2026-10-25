@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.job.infrastructure.persistence.entity;
 
+import com.br.ats.consult.api.client.infrastructure.persistence.entity.ClientEntity;
 import com.br.ats.consult.api.job.domain.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,6 +24,10 @@ public class JobPositionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "client_id", nullable = false)
+    private ClientEntity client;
 
     @Column(nullable = false)
     private String title;

@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.job.infrastructure.config;
 
+import com.br.ats.consult.api.client.domain.port.out.ClientGateway;
 import com.br.ats.consult.api.job.domain.port.out.JobPositionGateway;
 import com.br.ats.consult.api.job.domain.usecase.CreateJobPositionUseCase;
 import com.br.ats.consult.api.job.domain.usecase.DeleteJobPositionUseCase;
@@ -18,8 +19,9 @@ public class JobPositionUseCaseConfiguration {
 
     @Bean
     public CreateJobPositionUseCase createJobPositionUseCase(JobPositionGateway gateway,
-                                                             TechnologyGateway technologyGateway) {
-        return new CreateJobPositionUseCaseImpl(gateway,technologyGateway);
+                                                             TechnologyGateway technologyGateway,
+                                                             ClientGateway clientGateway) {
+        return new CreateJobPositionUseCaseImpl(gateway, technologyGateway, clientGateway);
     }
 
     @Bean
@@ -33,7 +35,9 @@ public class JobPositionUseCaseConfiguration {
     }
 
     @Bean
-    public UpdateJobPositionUseCase updateJobPositionUseCase (JobPositionGateway jobPositionGateway, TechnologyGateway technologyGateway){
-        return new UpdateJobPositionUseCaseImpl(jobPositionGateway, technologyGateway);
+    public UpdateJobPositionUseCase updateJobPositionUseCase(JobPositionGateway jobPositionGateway,
+                                                             TechnologyGateway technologyGateway,
+                                                             ClientGateway clientGateway) {
+        return new UpdateJobPositionUseCaseImpl(jobPositionGateway, technologyGateway, clientGateway);
     }
 }

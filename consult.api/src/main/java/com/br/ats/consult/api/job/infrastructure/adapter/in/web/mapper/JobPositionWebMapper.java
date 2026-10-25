@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.job.infrastructure.adapter.in.web.mapper;
 
+import com.br.ats.consult.api.client.domain.model.Client;
 import com.br.ats.consult.api.job.domain.model.JobPosition;
 import com.br.ats.consult.api.job.infrastructure.adapter.in.web.dto.JobPositionRequest;
 import com.br.ats.consult.api.job.infrastructure.adapter.in.web.dto.UpdateJobPositionRequest;
@@ -16,10 +17,12 @@ import java.util.List;
 public interface JobPositionWebMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "client", expression = "java(toClientRef(request.clientId()))")
     @Mapping(target = "technologies", expression = "java(toTechRefs(request.technologyIds()))")
     JobPosition toDomain(JobPositionRequest request);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "client", expression = "java(toClientRef(request.clientId()))")
     @Mapping(target = "technologies", expression = "java(toTechRefs(request.technologyIds()))")
     JobPosition toDomain(UpdateJobPositionRequest request);
 
@@ -35,5 +38,9 @@ public interface JobPositionWebMapper {
         return ids.stream()
                 .map(id -> Technology.builder().id(id).build())
                 .toList();
+    }
+
+    default Client toClientRef(Long clientId) {
+        return clientId == null ? null : Client.builder().id(clientId).build();
     }
 }

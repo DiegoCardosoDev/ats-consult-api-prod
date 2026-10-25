@@ -1,5 +1,7 @@
 package com.br.ats.consult.api.selectionprocess.domain.port.out;
 
+import com.br.ats.consult.api.selectionprocess.domain.enums.CandidateApplicationStatusEnum;
+import com.br.ats.consult.api.selectionprocess.domain.model.ApplicationComment;
 import com.br.ats.consult.api.selectionprocess.domain.model.CandidateApplication;
 import com.br.ats.consult.api.selectionprocess.domain.model.SelectionProcess;
 import org.springframework.data.domain.Page;
@@ -23,6 +25,12 @@ public interface SelectionProcessGateway {
     List<CandidateApplication> findApplicationsByProcessId(Long processId);
 
     Optional<CandidateApplication> findApplicationById(Long applicationId);
+
+    CandidateApplication updateApplicationStatus(Long applicationId, CandidateApplicationStatusEnum status);
+
+    ApplicationComment addComment(ApplicationComment comment);
+
+    List<ApplicationComment> findCommentsByApplicationId(Long applicationId);
 
     boolean existsApplication(Long processId, Long candidateId);
 }

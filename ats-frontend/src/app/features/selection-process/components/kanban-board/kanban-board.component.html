@@ -1,0 +1,76 @@
+<div class="kanban-board" cdkDropListGroup>
+  @for (column of columns; track column.status) {
+    <section class="kanban-column"
+             [style.--column-color]="column.color"
+             [style.--column-soft]="column.softColor">
+      <header class="kanban-column__header">
+        <div class="kanban-column__title">
+          <span class="kanban-column__icon">
+            <i class="bi" [ngClass]="column.icon"></i>
+          </span>
+          <div>
+            <h6>{{ column.label }}</h6>
+            <p>{{ column.description }}</p>
+          </div>
+        </div>
+        <span class="kanban-column__count">{{ applicationsFor(column.status).length }}</span>
+      </header>
+
+      <div class="kanban-column__body"
+           cdkDropList
+           [id]="column.status"
+           [cdkDropListData]="applicationsFor(column.status)"
+           (cdkDropListDropped)="drop($event)">
+        @for (application of applicationsFor(column.status); track application.id) {
+          <article class="kanban-card"
+                   cdkDrag
+                   [cdkDragData]="application"
+                   tabindex="0"
+                   role="button"
+                   [attr.aria-label]="'Abrir detalhes de ' + application.candidate.name"
+                   (click)="select(application)"
+                   (keydown.enter)="select(application)"
+                   (keydown.space)="select(application)">
+            <div class="kanban-card__top">
+              <div class="kanban-card__identity">
+                <span class="kanban-card__avatar">{{ application.candidate.name.charAt(0) }}</span>
+                <div>
+                  <h6>{{ application.candidate.name }}</h6>
+                  <span>{{ application.candidate.role }}</span>
+                </div>
+              </div>
+              @if (commentCount(application) > 0) {
+                <span class="kanban-card__comments" [title]="commentCount(application) + ' comentário(s)'">
+                  <i class="bi bi-chat-dots-fill"></i>
+                  {{ commentCount(application) }}
+                </span>
+              }
+            </div>
+
+            <div class="kanban-card__meta">
+              <span><i class="bi bi-envelope"></i> {{ application.candidate.email }}</span>
+              <span><i class="bi bi-telephone"></i> {{ application.candidate.phone }}</span>
+              <span><i class="bi bi-calendar3"></i> {{ application.appliedAt | date:'dd/MM/yyyy' }}</span>
+            </div>
+
+            <div class="kanban-card__footer">
+              <span class="kanban-card__resume" [title]="application.resume.filename">
+                <i class="bi bi-file-earmark-pdf"></i> Currículo
+              </span>
+              <span class="kanban-card__open">Ver detalhes <i class="bi bi-arrow-right-short"></i></span>
+            </div>
+
+            <div class="kanban-card__placeholder" *cdkDragPlaceholder></div>
+          </article>
+        }
+
+        @if (applicationsFor(column.status).length === 0) {
+          <div class="kanban-column__empty">
+            <i class="bi bi-inbox"></i>
+            <span>Arraste candidatos para esta fase</span>
+          </div>
+        }
+      </div>
+    </section>
+  }
+</div>

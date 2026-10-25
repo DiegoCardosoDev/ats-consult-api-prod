@@ -1,5 +1,7 @@
 package com.br.ats.consult.api.job.domain.usecase.impl;
 
+import com.br.ats.consult.api.client.domain.exception.ClientNotFoundException;
+import com.br.ats.consult.api.client.domain.port.out.ClientGateway;
 import com.br.ats.consult.api.job.domain.enums.JobStatusEnum;
 import com.br.ats.consult.api.job.domain.model.JobPosition;
 import com.br.ats.consult.api.job.domain.port.out.JobPositionGateway;
@@ -16,14 +18,24 @@ public class CreateJobPositionUseCaseImpl implements CreateJobPositionUseCase {
 
     private final TechnologyGateway technologyGateway;
 
-    public CreateJobPositionUseCaseImpl(JobPositionGateway gateway, TechnologyGateway technologyGateway) {
+    private final ClientGateway clientGateway;
+
+    public CreateJobPositionUseCaseImpl(JobPositionGateway gateway, TechnologyGateway technologyGateway,
+                                        ClientGateway clientGateway) {
         this.gateway = gateway;
         this.technologyGateway = technologyGateway;
+        this.clientGateway = clientGateway;
     }
 
     @Override
     @Transactional
     public JobPosition execute(JobPosition jobPosition) {
+        if (jobPosition.getClient() == null || jobPosition.getClient().getId() == null) {
+            throw new IllegalArgumentException("O cliente da vaga é obrigatório.");
+        }
+        jobPosition.setClient(clientGateway.findById(jobPosition.getClient().getId())
+                .orElseThrow(() -> new ClientNotFoundException(jobPosition.getClient().getId())));
+
         if (jobPosition.getStatus() == null) {
             jobPosition.setStatus(JobStatusEnum.DRAFT);
         }

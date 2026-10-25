@@ -12,6 +12,6 @@ public interface ApplyCandidateUseCase {
     CandidateApplicationResult applyToProcess(Long processId, Candidate candidate, ResumeUpload resume,
                                               List<FormAnswerInput> answers);
 
-    CandidateApplicationResult applyToJob(Long jobId, Long clientId, Candidate candidate, ResumeUpload resume,
+    CandidateApplicationResult applyToJob(Long jobId, Candidate candidate, ResumeUpload resume,
                                           List<FormAnswerInput> answers);
 }

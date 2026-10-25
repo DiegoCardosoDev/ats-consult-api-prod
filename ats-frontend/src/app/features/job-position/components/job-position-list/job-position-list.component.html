@@ -1,0 +1,195 @@
+<div class="page-layout text-white min-vh-100 d-flex flex-column">
+  
+  <!-- Navbar Superior Corporativa -->
+  <nav class="navbar navbar-expand-lg navbar-dark px-4 py-3 border-bottom border-white border-opacity-10 bg-dark-header">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/">
+        <span class="logo-badge bg-primary px-2 py-1 rounded fs-6">TN</span> 
+        <span class="fs-5 tracking-wide">TN CONSULTORIA</span>
+      </a>
+
+      <div class="d-flex align-items-center gap-3 ms-auto">
+        <a routerLink="/home" class="nav-link-custom">Home</a>
+        <a routerLink="/jobs/new" class="nav-link-custom">Cadastrar Vaga</a>
+        <a routerLink="/jobs" class="nav-link-custom active">Vagas</a>
+        <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
+        <a routerLink="/clients" class="nav-link-custom">Clientes</a>
+        <a routerLink="/processes" class="nav-link-custom">Processos</a>
+        <button type="button" (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Conteúdo Principal -->
+  <main class="container py-5 flex-grow-1">
+    <div class="list-wrapper mx-auto">
+
+      <!-- Cabeçalho da Seção -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="fw-bold text-white mb-1">Oportunidades em Aberto</h2>
+          <p class="text-light opacity-75 small mb-0">Explore as vagas disponíveis e encontre a sua próxima posição.</p>
+        </div>
+        @if (!isLoading && totalElements > 0) {
+          <span class="badge bg-primary px-3 py-2 rounded-pill fw-medium">
+            {{ totalElements }} {{ totalElements === 1 ? 'Vaga Encontrada' : 'Vagas Encontradas' }}
+          </span>
+        }
+      </div>
+
+      <!-- Spinner de Carregamento -->
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">A carregar vagas...</span>
+          </div>
+          <p class="mt-3 text-light opacity-75">A carregar as oportunidades...</p>
+        </div>
+      }
+
+      <!-- Mensagem de Erro -->
+      @if (errorMessage) {
+        <div class="alert alert-danger border-0 shadow-sm mb-4">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+        </div>
+      }
+
+      <!-- Caso não haja vagas cadastradas -->
+      @if (!isLoading && !errorMessage && jobs.length === 0) {
+        <div class="card border-0 shadow-lg p-5 rounded-4 bg-white text-dark text-center my-4">
+          <i class="bi bi-briefcase fs-1 text-muted mb-3"></i>
+          <h4 class="fw-bold">Nenhuma vaga encontrada</h4>
+          <p class="text-muted mb-4">Ainda não existem oportunidades cadastradas no sistema.</p>
+          <div>
+            <a routerLink="/jobs/new" class="btn btn-primary rounded-pill px-4 py-2 fw-semibold">
+              Cadastrar Primeira Vaga
+            </a>
+          </div>
+        </div>
+      }
+
+      <!-- Lista de Cards de Vagas -->
+      @if (!isLoading && jobs.length > 0) {
+        <div class="d-flex flex-column gap-4">
+          @for (job of jobs; track job.id) {
+            <!-- Card Clicável com Efeito de Hover e Redirecionamento -->
+            <div 
+              [routerLink]="['/jobs', job.id]" 
+              class="card job-card border-0 shadow-lg p-4 rounded-4 bg-white text-dark cursor-pointer position-relative">
+              
+              <!-- Título da Vaga, Faixa Salarial e Botão de Ação -->
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2">
+                <h3 class="fw-bold fs-4 text-dark mb-0 job-title-hover d-flex align-items-center gap-2">
+                  <span>{{ job.title }}</span>
+                </h3>
+
+                <div class="d-flex align-items-center gap-2 ms-auto ms-md-0">
+                  @if (job.minSalary || job.maxSalary) {
+                    <span class="badge bg-success-subtle text-success fw-semibold px-3 py-2 rounded-pill">
+                      R$ {{ job.minSalary | number:'1.0-0' }} - {{ job.maxSalary | number:'1.0-0' }}
+                    </span>
+                  }
+                  
+                  <!-- Indicador de Ação (Ver Detalhes) -->
+                  <span class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold btn-view-details d-flex align-items-center gap-1">
+                    Ver Detalhes <i class="bi bi-chevron-right"></i>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Localização -->
+              @if (job.location) {
+                <div class="text-muted small mb-3 d-flex align-items-center gap-1">
+                  <i class="bi bi-geo-alt-fill text-primary"></i>
+                  <span>{{ job.location.city }}, {{ job.location.state }} - {{ job.location.country }}</span>
+                </div>
+              }
+
+              <!-- Badges de Informações (Soft Badges) -->
+              <div class="d-flex flex-wrap gap-2 mb-3">
+                @if (job.client) {
+                  <span class="badge bg-dark-subtle text-dark rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                    <i class="bi bi-building"></i>
+                    {{ job.client.name }}
+                  </span>
+                }
+
+                <!-- Status da Vaga -->
+                @if (job.status) {
+                  <span class="badge bg-success text-white rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                    <i class="bi bi-check-circle-fill"></i>
+                    {{ getStatusLabel(job.status) }}
+                  </span>
+                }
+
+                <!-- Modelo de Trabalho -->
+                <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                  <i class="bi bi-laptop"></i>
+                  {{ getWorkModelLabel(job.workModel) }}
+                </span>
+
+                <!-- Tipo de Contrato -->
+                @if (job.contractType) {
+                  <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                    <i class="bi bi-file-text-fill"></i>
+                    {{ getContractTypeLabel(job.contractType) }}
+                  </span>
+                }
+
+                <!-- Formação Exigida -->
+                @if (job.educationLevel) {
+                  <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                    <i class="bi bi-mortarboard-fill"></i>
+                    {{ getEducationLevelLabel(job.educationLevel) }}
+                  </span>
+                }
+
+                <!-- Nível de Inglês -->
+                @if (job.englishLevel) {
+                  <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                    <i class="bi bi-globe"></i>
+                    {{ getEnglishLevelLabel(job.englishLevel) }}
+                  </span>
+                }
+              </div>
+
+              <!-- Requisitos / Tecnologias -->
+              <div>
+                <span class="d-block fw-semibold text-muted small mb-2">Requisitos e Tecnologias:</span>
+                <div class="d-flex flex-wrap gap-2">
+                  @if (job.technologies && job.technologies.length > 0) {
+                    @for (tech of job.technologies; track tech.id || tech) {
+                      <span class="tech-tag rounded-pill px-3 py-1 text-uppercase fw-semibold">
+                        {{ tech.name || tech }}
+                      </span>
+                    }
+                  } @else {
+                    <span class="text-muted small italic">Nenhuma tecnologia associada</span>
+                  }
+                </div>
+              </div>
+
+            </div>
+          }
+        </div>
+
+        @if (totalPages > 1) {
+          <nav class="d-flex justify-content-between align-items-center mt-4" aria-label="Paginação de vagas">
+            <button type="button" class="btn btn-outline-light rounded-pill px-4"
+                    [disabled]="first || isLoading" (click)="previousPage()">
+              Anterior
+            </button>
+            <span class="text-light opacity-75 small">
+              Página {{ page + 1 }} de {{ totalPages }}
+            </span>
+            <button type="button" class="btn btn-outline-light rounded-pill px-4"
+                    [disabled]="last || isLoading" (click)="nextPage()">
+              Seguinte
+            </button>
+          </nav>
+        }
+      }
+
+    </div>
+  </main>
+</div>

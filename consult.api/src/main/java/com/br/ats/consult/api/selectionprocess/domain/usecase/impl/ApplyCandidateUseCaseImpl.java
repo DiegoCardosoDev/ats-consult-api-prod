@@ -9,9 +9,7 @@ import com.br.ats.consult.api.applicationform.domain.model.FormAnswerInput;
 import com.br.ats.consult.api.applicationform.domain.port.out.ApplicationFormGateway;
 import com.br.ats.consult.api.candidate.domain.model.Candidate;
 import com.br.ats.consult.api.candidate.domain.port.out.CandidateGateway;
-import com.br.ats.consult.api.client.domain.exception.ClientNotFoundException;
 import com.br.ats.consult.api.client.domain.model.Client;
-import com.br.ats.consult.api.client.domain.port.out.ClientGateway;
 import com.br.ats.consult.api.job.domain.enums.JobStatusEnum;
 import com.br.ats.consult.api.job.domain.exception.JobPositionNotFoundException;
 import com.br.ats.consult.api.job.domain.model.JobPosition;
@@ -41,17 +39,15 @@ public class ApplyCandidateUseCaseImpl implements ApplyCandidateUseCase {
 
     private final SelectionProcessGateway processGateway;
     private final CandidateGateway candidateGateway;
-    private final ClientGateway clientGateway;
     private final JobPositionGateway jobPositionGateway;
     private final ApplicationFormGateway formGateway;
     private final ResumeStorage resumeStorage;
 
     public ApplyCandidateUseCaseImpl(SelectionProcessGateway processGateway, CandidateGateway candidateGateway,
-                                     ClientGateway clientGateway, JobPositionGateway jobPositionGateway,
+                                     JobPositionGateway jobPositionGateway,
                                      ApplicationFormGateway formGateway, ResumeStorage resumeStorage) {
         this.processGateway = processGateway;
         this.candidateGateway = candidateGateway;
-        this.clientGateway = clientGateway;
         this.jobPositionGateway = jobPositionGateway;
         this.formGateway = formGateway;
         this.resumeStorage = resumeStorage;
@@ -72,7 +68,7 @@ public class ApplyCandidateUseCaseImpl implements ApplyCandidateUseCase {
 
     @Override
     @Transactional
-    public CandidateApplicationResult applyToJob(Long jobId, Long clientId, Candidate candidate, ResumeUpload resume,
+    public CandidateApplicationResult applyToJob(Long jobId, Candidate candidate, ResumeUpload resume,
                                                  List<FormAnswerInput> answers) {
         JobPosition job = jobPositionGateway.findById(jobId)
                 .orElseThrow(() -> new JobPositionNotFoundException(jobId));
@@ -80,10 +76,12 @@ public class ApplyCandidateUseCaseImpl implements ApplyCandidateUseCase {
             throw new IllegalArgumentException("A vaga não está aberta para receber candidaturas.");
         }
 
-        Client client = clientGateway.findById(clientId)
-                .orElseThrow(() -> new ClientNotFoundException(clientId));
+        Client client = job.getClient();
+        if (client == null || client.getId() == null) {
+            throw new IllegalArgumentException("A vaga não possui um cliente associado.");
+        }
 
-        SelectionProcess process = processGateway.findOpenByClientIdAndJobPositionId(clientId, jobId)
+        SelectionProcess process = processGateway.findOpenByClientIdAndJobPositionId(client.getId(), jobId)
                 .orElseGet(() -> processGateway.save(SelectionProcess.builder()
                         .client(client)
                         .jobPosition(job)

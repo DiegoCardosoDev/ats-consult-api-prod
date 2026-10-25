@@ -20,6 +20,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -37,7 +38,7 @@ class CandidateSelectionProcessIntegrationTest {
     @Test
     void candidateAppliesWithPdfAndCanBeSearchedAndDownloaded() throws Exception {
         long clientId = createClient("11222333000181", "CLI-001");
-        long jobId = createJob("Desenvolvedor Java");
+        long jobId = createJob("Desenvolvedor Java", clientId);
 
         MvcResult processCreated = mockMvc.perform(post("/api/v1/selection-processes")
                         .with(user("recruiter").roles("TECH_RECRUITER"))
@@ -79,15 +80,14 @@ class CandidateSelectionProcessIntegrationTest {
     @Test
     void applyingToJobCreatesOrReusesOpenProcessAndPreventsDuplicates() throws Exception {
         long clientId = createClient("11222333000262", "CLI-002");
-        long jobId = createJob("Analista de Dados");
+        long jobId = createJob("Analista de Dados", clientId);
 
-        MvcResult first = applyToJob(jobId, clientId, "Bia Costa", "bia@example.com");
+        MvcResult first = applyToJob(jobId, "Bia Costa", "bia@example.com");
         Number processId = JsonPath.read(first.getResponse().getContentAsString(), "$.selectionProcessId");
 
         mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
                         .file(jsonCandidate("Bia Costa", "bia@example.com"))
                         .file(pdfFile())
-                        .param("clientId", Long.toString(clientId))
                         .with(user("recruiter").roles("TECH_RECRUITER"))
                         .with(csrf()))
                 .andExpect(status().isConflict());
@@ -96,9 +96,9 @@ class CandidateSelectionProcessIntegrationTest {
     @Test
     void candidateAppliedToJobCanBeFoundWithAndWithoutSearchFilters() throws Exception {
         long clientId = createClient("11222333000508", "CLI-005");
-        long jobId = createJob("Engenheira de Software");
+        long jobId = createJob("Engenheira de Software", clientId);
 
-        applyToJob(jobId, clientId, "Carla Souza", "carla@example.com");
+        applyToJob(jobId, "Carla Souza", "carla@example.com");
 
         mockMvc.perform(get("/api/v1/candidates")
                         .with(user("recruiter").roles("TECH_RECRUITER"))
@@ -115,8 +115,8 @@ class CandidateSelectionProcessIntegrationTest {
     @Test
     void jobApplicationFormIsAssociatedWithJobAndAnswersAreStored() throws Exception {
         long clientId = createClient("11222333000661", "CLI-006");
-        long jobId = createJob("Vaga com Formulário");
-        long otherJobId = createJob("Vaga Sem Formulário");
+        long jobId = createJob("Vaga com Formulário", clientId);
+        long otherJobId = createJob("Vaga Sem Formulário", clientId);
 
         mockMvc.perform(get("/api/v1/job-positions/{jobId}/application-form", jobId)
                         .with(user("recruiter").roles("TECH_RECRUITER")))
@@ -154,7 +154,6 @@ class CandidateSelectionProcessIntegrationTest {
         mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
                         .file(jsonCandidate("Diego Formulário", "diego.formulario@example.com"))
                         .file(pdfFile())
-                        .param("clientId", Long.toString(clientId))
                         .with(user("recruiter").roles("TECH_RECRUITER"))
                         .with(csrf()))
                 .andExpect(status().isBadRequest());
@@ -171,7 +170,6 @@ class CandidateSelectionProcessIntegrationTest {
                         .file(pdfFile())
                         .file(new MockMultipartFile("answers", "", MediaType.APPLICATION_JSON_VALUE,
                                 answers.getBytes(StandardCharsets.UTF_8)))
-                        .param("clientId", Long.toString(clientId))
                         .with(user("recruiter").roles("TECH_RECRUITER"))
                         .with(csrf()))
                 .andExpect(status().isCreated())
@@ -187,6 +185,69 @@ class CandidateSelectionProcessIntegrationTest {
                         .value("Tem experiência com Java?"))
                 .andExpect(jsonPath("$.candidates[0].answers[0].answer").value("Sim"))
                 .andExpect(jsonPath("$.candidates[0].answers[1].answer").value("Sênior"));
+    }
+
+    @Test
+    void kanbanStatusAndCommentsAreUpdatedAndListedNewestFirst() throws Exception {
+        long clientId = createClient("11222333000742", "CLI-007");
+        long jobId = createJob("Vaga Kanban", clientId);
+
+        MvcResult processCreated = mockMvc.perform(post("/api/v1/selection-processes")
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"clientId":%d,"jobPositionId":%d,"status":"OPEN","openedAt":"2026-10-22"}
+                                """.formatted(clientId, jobId)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        Number processId = JsonPath.read(processCreated.getResponse().getContentAsString(), "$.id");
+
+        MvcResult applied = applyToProcess(processId.longValue(), "Eva Kanban", "eva.kanban@example.com");
+        Number applicationId = JsonPath.read(applied.getResponse().getContentAsString(), "$.application.id");
+
+        mockMvc.perform(patch("/api/v1/applications/{id}/status", applicationId.longValue())
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"status":"ENTREVISTA_TECH_RECRUITER"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ENTREVISTA_TECH_RECRUITER"));
+
+        mockMvc.perform(post("/api/v1/applications/{id}/comments", applicationId.longValue())
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"message":"Primeiro contacto realizado."}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.authorEmail").value("recruiter"))
+                .andExpect(jsonPath("$.createdAt").isNotEmpty());
+
+        mockMvc.perform(post("/api/v1/applications/{id}/comments", applicationId.longValue())
+                        .with(user("recruiter").roles("TECH_RECRUITER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"message":"Entrevista agendada."}
+                                """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/applications/{id}/comments", applicationId.longValue())
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].message").value("Entrevista agendada."))
+                .andExpect(jsonPath("$[1].message").value("Primeiro contacto realizado."));
+
+        mockMvc.perform(get("/api/v1/selection-processes/{id}", processId.longValue())
+                        .with(user("recruiter").roles("TECH_RECRUITER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidates[0].status").value("ENTREVISTA_TECH_RECRUITER"))
+                .andExpect(jsonPath("$.candidates[0].comments.length()").value(2))
+                .andExpect(jsonPath("$.candidates[0].comments[0].message").value("Entrevista agendada."));
     }
 
     @Test
@@ -233,14 +294,14 @@ class CandidateSelectionProcessIntegrationTest {
         return ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.id")).longValue();
     }
 
-    private long createJob(String title) throws Exception {
+    private long createJob(String title, long clientId) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/job-positions")
                         .with(user("admin").roles("ADMIN"))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title":"%s","workModel":"REMOTE","contractType":"CLT","status":"OPEN"}
-                                """.formatted(title)))
+                                {"clientId":%d,"title":"%s","workModel":"REMOTE","contractType":"CLT","status":"OPEN"}
+                                """.formatted(clientId, title)))
                 .andExpect(status().isCreated())
                 .andReturn();
         return ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.id")).longValue();
@@ -258,11 +319,10 @@ class CandidateSelectionProcessIntegrationTest {
                 .andReturn();
     }
 
-    private MvcResult applyToJob(long jobId, long clientId, String name, String email) throws Exception {
+    private MvcResult applyToJob(long jobId, String name, String email) throws Exception {
         return mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
                         .file(jsonCandidate(name, email))
                         .file(pdfFile())
-                        .param("clientId", Long.toString(clientId))
                         .with(user("recruiter").roles("TECH_RECRUITER"))
                         .with(csrf()))
                 .andExpect(status().isCreated())

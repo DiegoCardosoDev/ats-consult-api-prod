@@ -1,0 +1,289 @@
+<div class="modal fade show d-block app-application-modal" tabindex="-1" style="background: rgba(2, 6, 23, .72); z-index: 1060;">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4 shadow-lg">
+      <div class="modal-header app-modal-header border-0">
+        <div>
+          <div class="modal-eyebrow">
+            {{ isSuccess ? 'Candidatura concluída' : (step === 'questions' ? 'Formulário da vaga' : 'Processo seletivo') }}
+          </div>
+          <h5 class="modal-title fw-bold">
+            {{ isSuccess ? 'Tudo certo!' : (step === 'questions' ? 'Perguntas da Candidatura' : 'Registar Candidatura') }}
+          </h5>
+          <p class="small mb-0">
+            @if (isSuccess) {
+              A candidatura foi registada com sucesso.
+            } @else if (step === 'questions') {
+              Responda às perguntas definidas para esta vaga antes de enviar os seus dados.
+            } @else {
+              Preencha os dados do candidato e anexe o currículo em PDF.
+            }
+          </p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="close()"
+                [disabled]="isSubmitting" aria-label="Fechar"></button>
+      </div>
+
+      @if (isSuccess) {
+        <div class="application-success">
+          <div class="success-icon" aria-hidden="true">✓</div>
+          <h4 class="fw-bold text-dark mt-3">Candidatura enviada com sucesso!</h4>
+          <p class="text-muted mb-1">
+            A candidatura de
+            <strong>{{ successResult?.application?.candidate?.name }}</strong>
+            foi registada.
+          </p>
+          <p class="text-muted small mb-0">Processo #{{ successResult?.selectionProcessId }}</p>
+          <button type="button" class="btn btn-primary rounded-pill px-4 mt-4" (click)="finishSuccess()">
+            Concluir
+          </button>
+        </div>
+      } @else {
+        @if (hasQuestions) {
+          <div class="application-steps">
+            <div class="application-step" [class.is-active]="step === 'questions'" [class.is-done]="step === 'candidate'">
+              <span class="application-step__number">1</span>
+              <span>Perguntas</span>
+            </div>
+            <span class="application-step__line"></span>
+            <div class="application-step" [class.is-active]="step === 'candidate'">
+              <span class="application-step__number">2</span>
+              <span>Dados e currículo</span>
+            </div>
+          </div>
+        }
+
+        @if (hasQuestions && step === 'questions') {
+          <form [formGroup]="answersForm" (ngSubmit)="continueToCandidate()">
+            <div class="modal-body app-modal-body">
+              @if (errorMessage) {
+                <div class="alert alert-danger py-2 small border-0">{{ errorMessage }}</div>
+              }
+
+              @if (applicationForm?.title) {
+                <div class="form-section">
+                  <div class="section-heading">
+                    <h6>{{ applicationForm?.title }}</h6>
+                  </div>
+                  @if (applicationForm?.description) {
+                    <p class="text-muted small mb-0">{{ applicationForm?.description }}</p>
+                  } @else {
+                    <p class="text-muted small mb-0">As perguntas abaixo estão associadas a esta vaga.</p>
+                  }
+                </div>
+              }
+
+              @for (question of questions; track question.id; let i = $index) {
+                <div class="form-section">
+                  <div class="section-heading">
+                    <h6>
+                      {{ i + 1 }}. {{ question.prompt }}
+                      @if (question.required) {
+                        <span class="required">*</span>
+                      }
+                    </h6>
+                  </div>
+
+                  @switch (question.type) {
+                    @case ('TEXTAREA') {
+                      <textarea class="form-control" rows="3" [formControlName]="answerControlName(question)"
+                                placeholder="Escreva a sua resposta"></textarea>
+                    }
+                    @case ('NUMBER') {
+                      <input type="number" class="form-control" [formControlName]="answerControlName(question)"
+                             placeholder="Informe um número">
+                    }
+                    @case ('YES_NO') {
+                      <select class="form-select" [formControlName]="answerControlName(question)">
+                        <option value="">Selecione...</option>
+                        <option value="Sim">Sim</option>
+                        <option value="Não">Não</option>
+                      </select>
+                    }
+                    @case ('SINGLE_CHOICE') {
+                      <select class="form-select" [formControlName]="answerControlName(question)">
+                        <option value="">Selecione...</option>
+                        @for (option of question.options; track option) {
+                          <option [value]="option">{{ option }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('MULTIPLE_CHOICE') {
+                      <select class="form-select" multiple size="4"
+                              [formControlName]="answerControlName(question)">
+                        @for (option of question.options; track option) {
+                          <option [value]="option">{{ option }}</option>
+                        }
+                      </select>
+                      <div class="form-text">Selecione uma ou mais opções.</div>
+                    }
+                    @default {
+                      <input type="text" class="form-control" [formControlName]="answerControlName(question)"
+                             placeholder="Escreva a sua resposta">
+                    }
+                  }
+
+                  @if (answerControl(question)?.touched && answerControl(question)?.invalid) {
+                    <div class="text-danger small mt-1">Esta pergunta é obrigatória.</div>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="modal-footer app-modal-footer border-0">
+              <button type="button" class="btn btn-outline-secondary rounded-pill px-4" (click)="close()">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary rounded-pill px-4">
+                Continuar <i class="bi bi-arrow-right ms-1"></i>
+              </button>
+            </div>
+          </form>
+        } @else {
+          <form [formGroup]="applicationFormGroup" (ngSubmit)="submit()">
+            <div class="modal-body app-modal-body">
+              @if (errorMessage) {
+                <div class="alert alert-danger py-2 small border-0">{{ errorMessage }}</div>
+              }
+
+              <section class="form-section">
+                <div class="section-heading">
+                  <h6>Dados do candidato</h6>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-md-8">
+                    <label class="form-label">Nome <span class="required">*</span></label>
+                    <input type="text" class="form-control" formControlName="name"
+                           autocomplete="name" placeholder="Nome completo">
+                    @if (applicationFormGroup.get('name')?.touched && applicationFormGroup.get('name')?.invalid) {
+                      <div class="text-danger small mt-1">Informe o nome.</div>
+                    }
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Idade <span class="required">*</span></label>
+                    <input type="number" class="form-control" formControlName="age"
+                           min="16" max="120" inputmode="numeric" placeholder="Ex.: 28">
+                    @if (applicationFormGroup.get('age')?.touched && applicationFormGroup.get('age')?.invalid) {
+                      <div class="text-danger small mt-1">Entre 16 e 120.</div>
+                    }
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Cargo <span class="required">*</span></label>
+                    <input type="text" class="form-control" formControlName="role"
+                           placeholder="Ex.: Desenvolvedor Java">
+                    @if (applicationFormGroup.get('role')?.touched && applicationFormGroup.get('role')?.invalid) {
+                      <div class="text-danger small mt-1">Informe o cargo.</div>
+                    }
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">LinkedIn</label>
+                    <input type="url" class="form-control" formControlName="linkedinUrl"
+                           autocomplete="url" placeholder="https://linkedin.com/in/...">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">E-mail <span class="required">*</span></label>
+                    <input type="email" class="form-control" formControlName="email"
+                           autocomplete="email" placeholder="nome@exemplo.com">
+                    @if (applicationFormGroup.get('email')?.touched && applicationFormGroup.get('email')?.invalid) {
+                      <div class="text-danger small mt-1">Informe um e-mail válido.</div>
+                    }
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Telefone <span class="required">*</span></label>
+                    <input type="tel" class="form-control" formControlName="phone"
+                           autocomplete="tel" placeholder="+351 912 345 678">
+                    @if (applicationFormGroup.get('phone')?.touched && applicationFormGroup.get('phone')?.invalid) {
+                      <div class="text-danger small mt-1">Informe o telefone.</div>
+                    }
+                  </div>
+                </div>
+              </section>
+
+              <section class="form-section">
+                <div class="section-heading">
+                  <h6>Endereço</h6>
+                  <span class="section-tag">Opcional</span>
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-8">
+                    <label class="form-label">Rua</label>
+                    <input type="text" class="form-control" formControlName="street"
+                           autocomplete="address-line1" placeholder="Rua ou avenida">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Número</label>
+                    <input type="text" class="form-control" formControlName="number" placeholder="N.º">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Complemento</label>
+                    <input type="text" class="form-control" formControlName="complement" placeholder="Apartamento, bloco...">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Bairro</label>
+                    <input type="text" class="form-control" formControlName="neighborhood" placeholder="Bairro">
+                  </div>
+                  <div class="col-md-5">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" class="form-control" formControlName="city"
+                           autocomplete="address-level2" placeholder="Cidade">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Estado</label>
+                    <input type="text" class="form-control" formControlName="state"
+                           autocomplete="address-level1" placeholder="Estado">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Código postal</label>
+                    <input type="text" class="form-control" formControlName="zipCode"
+                           autocomplete="postal-code" placeholder="0000-000">
+                  </div>
+                  <div class="col-md-12">
+                    <label class="form-label">País</label>
+                    <input type="text" class="form-control" formControlName="country"
+                           autocomplete="country-name" placeholder="País">
+                  </div>
+                </div>
+              </section>
+
+              <section class="form-section">
+                <div class="section-heading">
+                  <h6>Currículo</h6>
+                </div>
+                <label class="form-label" for="resumeFile">Currículo em PDF <span class="required">*</span></label>
+                <input #fileInput id="resumeFile" type="file" class="form-control form-control-lg"
+                       accept=".pdf,application/pdf" (change)="onFileSelected($event)">
+                <div class="form-text">Formato PDF, até 10 MB.</div>
+                @if (selectedResume) {
+                  <div class="resume-selected">
+                    <span class="resume-selected__label">PDF selecionado</span>
+                    <strong>{{ selectedResume.name }}</strong>
+                  </div>
+                }
+              </section>
+            </div>
+
+            <div class="modal-footer app-modal-footer border-0">
+              @if (hasQuestions) {
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4 me-auto"
+                        (click)="backToQuestions()">
+                  <i class="bi bi-arrow-left me-1"></i> Voltar
+                </button>
+              } @else {
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" (click)="close()">
+                  Cancelar
+                </button>
+              }
+              <button type="submit" class="btn btn-primary rounded-pill px-4" [disabled]="isSubmitting">
+                @if (isSubmitting) {
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                Guardar Candidatura
+              </button>
+            </div>
+          </form>
+        }
+      }
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show"></div>

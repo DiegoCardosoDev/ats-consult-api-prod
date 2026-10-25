@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.job.infrastructure.persistence.mapper;
 
+import com.br.ats.consult.api.client.infrastructure.persistence.mapper.ClientMapper;
 import com.br.ats.consult.api.job.domain.model.JobPosition;
 import com.br.ats.consult.api.job.infrastructure.persistence.entity.JobPositionEntity;
 import com.br.ats.consult.api.technology.domain.model.Technology;
@@ -9,12 +10,13 @@ import org.mapstruct.MappingConstants;
 
 import java.util.List;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {ClientMapper.class})
 public interface JobPositionMapper {
 
     @Mapping(target = "technologies", ignore = true)
     JobPosition toDomain(JobPositionEntity entity);
 
+    @Mapping(target = "client", ignore = true)
     @Mapping(target = "technologyIds", expression = "java(mapTechnologiesToEntityIds(domain.getTechnologies()))")
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdAt", ignore = true)

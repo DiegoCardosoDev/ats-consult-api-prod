@@ -1,0 +1,293 @@
+<div class="page-layout text-white min-vh-100 d-flex flex-column">
+  
+  <!-- Navbar Superior Corporativa -->
+  <nav class="navbar navbar-expand-lg navbar-dark px-4 py-3 border-bottom border-white border-opacity-10 bg-dark-header">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/">
+        <span class="logo-badge bg-primary px-2 py-1 rounded fs-6">TN</span> 
+        <span class="fs-5 tracking-wide">TN CONSULTORIA</span>
+      </a>
+
+      <div class="d-flex align-items-center gap-3 ms-auto">
+        <a routerLink="/home" class="nav-link-custom">Home</a>
+        <a routerLink="/jobs" class="nav-link-custom active">Vagas</a>
+        <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
+        <a routerLink="/clients" class="nav-link-custom">Clientes</a>
+        <a routerLink="/processes" class="nav-link-custom">Processos</a>
+        <button type="button" (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Conteúdo Principal -->
+  <main class="container py-5 flex-grow-1">
+    <div class="detail-wrapper mx-auto style-max-width">
+
+      <!-- Botão Voltar -->
+      <div class="mb-4">
+        <a routerLink="/jobs" class="btn btn-outline-light rounded-pill px-4 d-inline-flex align-items-center gap-2">
+          <i class="bi bi-arrow-left"></i> Voltar para Vagas
+        </a>
+      </div>
+
+      <!-- Spinner -->
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;"></div>
+          <p class="mt-3 text-light opacity-75">A carregar detalhes da oportunidade...</p>
+        </div>
+      }
+
+      <!-- Mensagem de Erro -->
+      @if (errorMessage) {
+        <div class="alert alert-danger border-0 shadow-sm mb-4">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+        </div>
+      }
+
+      @if (applicationSuccessMessage) {
+        <div class="alert alert-success border-0 shadow-sm mb-4 d-flex flex-wrap align-items-center gap-2">
+          <span><i class="bi bi-check-circle-fill me-2"></i>{{ applicationSuccessMessage }}</span>
+          @if (appliedProcessId) {
+            <a [routerLink]="['/processes', appliedProcessId]" class="btn btn-sm btn-success rounded-pill px-3 ms-auto">
+              Abrir Processo
+            </a>
+          }
+        </div>
+      }
+
+      <!-- Card Principal de Detalhes -->
+      @if (!isLoading && job) {
+        <div class="card border-0 shadow-lg p-4 p-md-5 rounded-4 bg-white text-dark">
+          
+          <!-- Cabeçalho do Card (Título, Localização, Salário e Botões ao Lado) -->
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 border-bottom pb-4 mb-4">
+            <div>
+              <h2 class="fw-bold text-dark fs-2 mb-2">{{ job.title }}</h2>
+              @if (job.client) {
+                <p class="text-muted mb-1 d-flex align-items-center gap-2">
+                  <i class="bi bi-building-fill text-primary"></i>
+                  <span><strong class="text-dark">Cliente:</strong> {{ job.client.name }} ({{ job.client.code }})</span>
+                </p>
+              }
+              @if (job.location) {
+                <p class="text-muted mb-0 d-flex align-items-center gap-2">
+                  <i class="bi bi-geo-alt-fill text-primary fs-5"></i>
+                  <span>{{ job.location.city }}, {{ job.location.state }} - {{ job.location.country }}</span>
+                </p>
+              }
+            </div>
+
+            <!-- Bloco da Direita: Salário e Ações (Editar / Apagar) -->
+            <div class="d-flex flex-column align-items-md-end gap-3">
+              @if (job.minSalary || job.maxSalary) {
+                <div class="bg-success-subtle text-success px-4 py-2 rounded-pill fw-bold fs-5 text-nowrap">
+                  R$ {{ job.minSalary | number:'1.0-0' }} - {{ job.maxSalary | number:'1.0-0' }}
+                </div>
+              }
+
+              <!-- Botões de Editar e Apagar posicionado ao lado/abaixo do salário -->
+              <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="openApplicationModal()">
+                  <i class="bi bi-file-earmark-person-fill"></i> Receber Candidatura
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="onEdit(job.id!)">
+                  <i class="bi bi-pencil-fill"></i> Editar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="onDelete(job.id!)">
+                  <i class="bi bi-trash-fill"></i> Apagar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Badges de Atributos da Vaga -->
+          <div class="mb-4">
+            <h6 class="fw-semibold text-muted text-uppercase small mb-3">Informações Gerais:</h6>
+            <div class="d-flex flex-wrap gap-2">
+              @if (job.status) {
+                <span class="badge bg-success text-white rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                  <i class="bi bi-check-circle-fill"></i> Status: {{ getStatusLabel(job.status) }}
+                </span>
+              }
+
+              <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                <i class="bi bi-laptop"></i> Modelo: {{ getWorkModelLabel(job.workModel) }}
+              </span>
+
+              @if (job.contractType) {
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                  <i class="bi bi-file-text-fill"></i> Contrato: {{ getContractTypeLabel(job.contractType) }}
+                </span>
+              }
+
+              @if (job.educationLevel) {
+                <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                  <i class="bi bi-mortarboard-fill"></i> Formação: {{ getEducationLevelLabel(job.educationLevel) }}
+                </span>
+              }
+
+              @if (job.englishLevel) {
+                <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                  <i class="bi bi-globe"></i> Inglês: {{ getEnglishLevelLabel(job.englishLevel) }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- Descrição da Vaga -->
+          <div class="mb-4">
+            <h5 class="fw-semibold text-dark mb-3">Sobre a Oportunidade</h5>
+            <div class="p-3 bg-light rounded-3 border-start border-4 border-primary text-secondary fs-6 style-white-space">
+              {{ job.description || 'Nenhuma descrição detalhada foi fornecida para esta oportunidade.' }}
+            </div>
+          </div>
+
+          <!-- Requisitos / Tecnologias -->
+          <div class="mb-4">
+            <h5 class="fw-semibold text-dark mb-3">Tecnologias Exigidas</h5>
+            <div class="d-flex flex-wrap gap-2">
+              @if (job.technologies && job.technologies.length > 0) {
+                @for (tech of job.technologies; track tech.id || tech) {
+                  <span class="tech-tag rounded-pill px-3 py-2 text-uppercase fw-semibold border">
+                    {{ tech.name || tech }}
+                  </span>
+                }
+              } @else {
+                <span class="text-muted italic">Nenhuma tecnologia especificada.</span>
+              }
+            </div>
+          </div>
+
+          <!-- Formulário de candidatura associado à vaga -->
+          <div class="pt-4 border-top">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+              <div>
+                <h5 class="fw-semibold text-dark mb-1">Formulário de Candidatura</h5>
+                <p class="text-muted small mb-0">Perguntas apresentadas ao candidato ao candidatar-se a esta vaga.</p>
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                @if (applicationForm) {
+                  <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                          (click)="openFormEditor()">
+                    <i class="bi bi-pencil-square me-1"></i> Editar formulário
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                          (click)="removeApplicationForm()">
+                    <i class="bi bi-trash me-1"></i> Remover
+                  </button>
+                } @else {
+                  <button type="button" class="btn btn-sm btn-primary rounded-pill px-3"
+                          (click)="openFormEditor()">
+                    <i class="bi bi-plus-lg me-1"></i> Criar formulário
+                  </button>
+                }
+              </div>
+            </div>
+
+            @if (isLoadingForm) {
+              <div class="text-muted small d-flex align-items-center gap-2">
+                <span class="spinner-border spinner-border-sm"></span> A carregar formulário...
+              </div>
+            }
+
+            @if (formErrorMessage) {
+              <div class="alert alert-warning py-2 small mb-3">{{ formErrorMessage }}</div>
+            }
+
+            @if (!isLoadingForm && applicationForm) {
+              <div class="p-3 bg-light rounded-3 border">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                  <span class="fw-semibold text-dark">{{ applicationForm.title }}</span>
+                  <span class="badge rounded-pill"
+                        [class.bg-success]="applicationForm.active"
+                        [class.bg-secondary]="!applicationForm.active">
+                    {{ applicationForm.active ? 'Ativo' : 'Inativo' }}
+                  </span>
+                  <span class="badge bg-primary-subtle text-primary rounded-pill">
+                    {{ applicationForm.questions.length }} pergunta(s)
+                  </span>
+                </div>
+                @if (applicationForm.description) {
+                  <p class="text-muted small mb-2">{{ applicationForm.description }}</p>
+                }
+                @if (applicationForm.questions.length > 0) {
+                  <ol class="mb-0 ps-3 small text-secondary">
+                    @for (question of applicationForm.questions; track question.id || question.prompt) {
+                      <li class="mb-1">
+                        {{ question.prompt }}
+                        @if (question.required) {
+                          <span class="text-danger fw-semibold">*</span>
+                        }
+                        <span class="text-muted">({{ question.type }})</span>
+                      </li>
+                    }
+                  </ol>
+                } @else {
+                  <p class="text-muted small mb-0">O formulário ainda não tem perguntas.</p>
+                }
+              </div>
+            }
+
+            @if (!isLoadingForm && !applicationForm) {
+              <div class="p-3 bg-light rounded-3 border text-muted small">
+                Esta vaga ainda não tem formulário de perguntas. As candidaturas seguem apenas com os dados do candidato e o currículo.
+              </div>
+            }
+          </div>
+
+        </div>
+      }
+
+    </div>
+  </main>
+
+  @if (showApplicationModal && job?.id) {
+    <app-candidate-application-modal
+      mode="job"
+      [targetId]="job!.id!"
+      [applicationForm]="applicationForm"
+      (closed)="closeApplicationModal()"
+      (applied)="onApplicationApplied($event)">
+    </app-candidate-application-modal>
+  }
+
+  @if (showFormEditor && job?.id) {
+    <app-application-form-editor
+      [jobId]="job!.id!"
+      [jobTitle]="job!.title"
+      (closed)="closeFormEditor()"
+      (saved)="onFormSaved($event)">
+    </app-application-form-editor>
+  }
+
+  <!-- Modal de Confirmação de Exclusão Personalizado -->
+  <div class="modal fade" [class.show]="isDeleteModalOpen" [style.display]="isDeleteModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" style="background: rgba(0,0,0,0.6);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content bg-white text-dark rounded-4 shadow-lg border-0 p-3">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle-fill"></i> Confirmar Exclusão
+          </h5>
+          <button type="button" class="btn-close" aria-label="Close" (click)="closeDeleteModal()"></button>
+        </div>
+        <div class="modal-body py-3">
+          <p class="text-secondary mb-0">
+            Tem a certeza de que deseja apagar a vaga <strong>{{ job?.title }}</strong>? Esta ação não poderá ser desfeita.
+          </p>
+        </div>
+        <div class="modal-footer border-0 pt-0 d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary rounded-pill px-4" (click)="closeDeleteModal()">
+            Cancelar
+          </button>
+          <button type="button" class="btn btn-danger rounded-pill px-4" (click)="confirmDelete()">
+            <i class="bi bi-trash-fill me-1"></i> Sim, Apagar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  @if (isDeleteModalOpen) {
+    <div class="modal-backdrop fade show"></div>
+  }
+</div>

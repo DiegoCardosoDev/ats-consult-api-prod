@@ -6,16 +6,21 @@ import com.br.ats.consult.api.candidate.infrastructure.persistence.repository.Sp
 import com.br.ats.consult.api.client.infrastructure.persistence.repository.SpringDataClientRepository;
 import com.br.ats.consult.api.job.domain.exception.JobPositionNotFoundException;
 import com.br.ats.consult.api.job.infrastructure.persistence.repository.SpringDataJobPositionRepository;
+import com.br.ats.consult.api.selectionprocess.domain.enums.CandidateApplicationStatusEnum;
 import com.br.ats.consult.api.selectionprocess.domain.enums.SelectionProcessStatusEnum;
+import com.br.ats.consult.api.selectionprocess.domain.exception.CandidateApplicationNotFoundException;
 import com.br.ats.consult.api.selectionprocess.domain.exception.SelectionProcessNotFoundException;
+import com.br.ats.consult.api.selectionprocess.domain.model.ApplicationComment;
 import com.br.ats.consult.api.selectionprocess.domain.model.CandidateApplication;
 import com.br.ats.consult.api.selectionprocess.domain.model.SelectionProcess;
 import com.br.ats.consult.api.selectionprocess.domain.port.out.SelectionProcessGateway;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationAnswerEntity;
+import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationCommentEntity;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationEntity;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity.SelectionProcessEntity;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.mapper.CandidateApplicationMapper;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.mapper.SelectionProcessMapper;
+import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.repository.SpringDataCandidateApplicationCommentRepository;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.repository.SpringDataCandidateApplicationRepository;
 import com.br.ats.consult.api.selectionprocess.infrastructure.persistence.repository.SpringDataSelectionProcessRepository;
 import org.springframework.data.domain.Page;
@@ -32,6 +37,7 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
 
     private final SpringDataSelectionProcessRepository repository;
     private final SpringDataCandidateApplicationRepository applicationRepository;
+    private final SpringDataCandidateApplicationCommentRepository applicationCommentRepository;
     private final SpringDataClientRepository clientRepository;
     private final SpringDataJobPositionRepository jobPositionRepository;
     private final SpringDataCandidateRepository candidateRepository;
@@ -40,6 +46,7 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
 
     public SelectionProcessRepositoryAdapter(SpringDataSelectionProcessRepository repository,
                                              SpringDataCandidateApplicationRepository applicationRepository,
+                                             SpringDataCandidateApplicationCommentRepository applicationCommentRepository,
                                              SpringDataClientRepository clientRepository,
                                              SpringDataJobPositionRepository jobPositionRepository,
                                              SpringDataCandidateRepository candidateRepository,
@@ -47,6 +54,7 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
                                              CandidateApplicationMapper applicationMapper) {
         this.repository = repository;
         this.applicationRepository = applicationRepository;
+        this.applicationCommentRepository = applicationCommentRepository;
         this.clientRepository = clientRepository;
         this.jobPositionRepository = jobPositionRepository;
         this.candidateRepository = candidateRepository;
@@ -106,6 +114,9 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
                 .resumeContentType(application.getResume().getContentType())
                 .resumeSizeBytes(application.getResume().getSizeBytes())
                 .resumeStorageKey(application.getResume().getStorageKey())
+                .status(application.getStatus() == null
+                        ? CandidateApplicationStatusEnum.TRIAGEM
+                        : application.getStatus())
                 .appliedAt(application.getAppliedAt() == null ? Instant.now() : application.getAppliedAt())
                 .build();
 
@@ -135,6 +146,42 @@ public class SelectionProcessRepositoryAdapter implements SelectionProcessGatewa
     public Optional<CandidateApplication> findApplicationById(Long applicationId) {
         return applicationRepository.findWithDetailsById(applicationId)
                 .map(applicationMapper::toDomain);
+    }
+
+    @Override
+    public CandidateApplication updateApplicationStatus(Long applicationId,
+                                                        CandidateApplicationStatusEnum status) {
+        CandidateApplicationEntity entity = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new CandidateApplicationNotFoundException(applicationId));
+        entity.setStatus(status);
+        return applicationMapper.toDomain(applicationRepository.save(entity));
+    }
+
+    @Override
+    public ApplicationComment addComment(ApplicationComment comment) {
+        CandidateApplicationEntity application = applicationRepository.findById(comment.getApplicationId())
+                .orElseThrow(() -> new CandidateApplicationNotFoundException(comment.getApplicationId()));
+
+        CandidateApplicationCommentEntity entity = CandidateApplicationCommentEntity.builder()
+                .application(application)
+                .authorId(comment.getAuthorId())
+                .authorEmail(comment.getAuthorEmail())
+                .message(comment.getMessage().trim())
+                .createdAt(comment.getCreatedAt() == null ? Instant.now() : comment.getCreatedAt())
+                .build();
+
+        CandidateApplicationCommentEntity saved = applicationCommentRepository.save(entity);
+        return applicationMapper.mapComment(saved);
+    }
+
+    @Override
+    public List<ApplicationComment> findCommentsByApplicationId(Long applicationId) {
+        return applicationRepository.findWithDetailsById(applicationId)
+                .map(CandidateApplicationEntity::getComments)
+                .orElseThrow(() -> new CandidateApplicationNotFoundException(applicationId))
+                .stream()
+                .map(applicationMapper::mapComment)
+                .toList();
     }
 
     @Override

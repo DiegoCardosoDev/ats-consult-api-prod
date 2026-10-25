@@ -59,7 +59,7 @@ public class SecurityAuthConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(parseAllowedOrigins());
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
                 "Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Requested-With", "Accept", "X-Request-Id"));
         configuration.setAllowCredentials(true);
@@ -139,6 +139,8 @@ public class SecurityAuthConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/selection-processes/**").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/applications/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/applications/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/applications/*/comments").authenticated()
 
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()

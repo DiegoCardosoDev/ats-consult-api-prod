@@ -85,15 +85,18 @@ class SecurityAuthorizationTest {
 
     @Test
     void adminCanCreateAndUpdateJobPositionPreservingStatus() throws Exception {
+        long clientId = createClient("11222333000904", "CLI-009");
+
         MvcResult created = mockMvc.perform(post("/api/v1/job-positions")
                         .with(user("admin").roles("ADMIN"))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title":"Vaga original","workModel":"REMOTE","contractType":"CLT","status":"OPEN"}
-                                """))
+                                {"clientId":%d,"title":"Vaga original","workModel":"REMOTE","contractType":"CLT","status":"OPEN"}
+                                """.formatted(clientId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("OPEN"))
+                .andExpect(jsonPath("$.client.id").value(clientId))
                 .andReturn();
 
         Number id = JsonPath.read(created.getResponse().getContentAsString(), "$.id");
@@ -103,11 +106,24 @@ class SecurityAuthorizationTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"title":"Vaga atualizada","status":"OPEN","workModel":"HYBRID","contractType":"PJ"}
-                                """))
+                                {"clientId":%d,"title":"Vaga atualizada","status":"OPEN","workModel":"HYBRID","contractType":"PJ"}
+                                """.formatted(clientId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Vaga atualizada"))
                 .andExpect(jsonPath("$.status").value("OPEN"));
+    }
+
+    private long createClient(String cnpj, String code) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/v1/clients")
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Cliente Teste","cnpj":"%s","code":"%s"}
+                                """.formatted(cnpj, code)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.id")).longValue();
     }
 
     @Test

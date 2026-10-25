@@ -8,10 +8,14 @@ import com.br.ats.consult.api.selectionprocess.domain.port.out.ResumeStorage;
 import com.br.ats.consult.api.selectionprocess.domain.port.out.SelectionProcessGateway;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.ApplyCandidateUseCase;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.CreateSelectionProcessUseCase;
+import com.br.ats.consult.api.selectionprocess.domain.usecase.ManageApplicationCommentUseCase;
+import com.br.ats.consult.api.selectionprocess.domain.usecase.UpdateApplicationStatusUseCase;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.FindSelectionProcessUseCase;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.impl.ApplyCandidateUseCaseImpl;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.impl.CreateSelectionProcessUseCaseImpl;
 import com.br.ats.consult.api.selectionprocess.domain.usecase.impl.FindSelectionProcessUseCaseImpl;
+import com.br.ats.consult.api.selectionprocess.domain.usecase.impl.ManageApplicationCommentUseCaseImpl;
+import com.br.ats.consult.api.selectionprocess.domain.usecase.impl.UpdateApplicationStatusUseCaseImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -31,13 +35,22 @@ public class SelectionProcessUseCaseConfiguration {
     }
 
     @Bean
+    public UpdateApplicationStatusUseCase updateApplicationStatusUseCase(SelectionProcessGateway gateway) {
+        return new UpdateApplicationStatusUseCaseImpl(gateway);
+    }
+
+    @Bean
+    public ManageApplicationCommentUseCase manageApplicationCommentUseCase(SelectionProcessGateway gateway) {
+        return new ManageApplicationCommentUseCaseImpl(gateway);
+    }
+
+    @Bean
     public ApplyCandidateUseCase applyCandidateUseCase(SelectionProcessGateway processGateway,
                                                        CandidateGateway candidateGateway,
-                                                       ClientGateway clientGateway,
                                                        JobPositionGateway jobPositionGateway,
                                                        ApplicationFormGateway applicationFormGateway,
                                                        ResumeStorage resumeStorage) {
-        return new ApplyCandidateUseCaseImpl(processGateway, candidateGateway, clientGateway,
+        return new ApplyCandidateUseCaseImpl(processGateway, candidateGateway,
                 jobPositionGateway, applicationFormGateway, resumeStorage);
     }
 }

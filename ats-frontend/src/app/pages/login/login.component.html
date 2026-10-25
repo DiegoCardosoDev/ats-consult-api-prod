@@ -1,0 +1,35 @@
+<div class="login-background">
+    <div class="login-card">
+      <h2>Entrar no ATS</h2>
+      
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        
+        <div *ngIf="errorMessage" class="alert-error">
+          {{ errorMessage }}
+        </div>
+  
+        <div class="form-group">
+          <input 
+            type="email" 
+            formControlName="email" 
+            class="form-control-pill" 
+            placeholder="E-mail" 
+          />
+        </div>
+  
+        <div class="form-group">
+          <input 
+            type="password" 
+            formControlName="password" 
+            class="form-control-pill" 
+            placeholder="Palavra-passe" 
+          />
+        </div>
+  
+        <button type="submit" [disabled]="loginForm.invalid" class="btn-login-pill">
+          Entrar
+        </button>
+  
+      </form>
+    </div>
+  </div>

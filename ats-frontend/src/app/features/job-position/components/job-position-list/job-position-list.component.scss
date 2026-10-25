@@ -1,0 +1,94 @@
+.page-layout {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+  }
+  
+  .bg-dark-header {
+    background-color: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+  }
+  
+  .tracking-wide {
+    letter-spacing: 1px;
+  }
+  
+  .nav-link-custom {
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    transition: all 0.2s ease;
+  
+    &:hover {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  
+    &.active {
+      color: #0f172a;
+      background-color: #ffffff;
+      font-weight: 600;
+    }
+  }
+  
+  .list-wrapper {
+    max-width: 760px; // Alinhado para manter o formato dos cards centralizados como no protótipo
+    width: 100%;
+  }
+  
+  .job-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25) !important;
+    }
+  }
+  
+  /* Badge Roxo idêntico ao protótipo */
+  .badge-purple {
+    background-color: #6366f1;
+    color: #ffffff;
+    font-weight: 500;
+    font-size: 0.85rem;
+  }
+  
+  /* Tag de Tecnologia (Cinza) */
+  .tech-tag {
+    background-color: #a3a3a3;
+    color: #ffffff;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+  }
+  .job-card {
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    border: 2px solid transparent !important;
+  
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 32px rgba(15, 23, 42, 0.2) !important;
+      border-color: #3b82f6 !important; // Borda azul suave ao passar o rato
+  
+      .job-title-hover {
+        color: #2563eb !important; // Destaca o título em azul
+      }
+  
+      .icon-arrow {
+        opacity: 1 !important;
+        transform: translateX(4px);
+        transition: all 0.2s ease;
+      }
+  
+      .btn-view-details {
+        background-color: #2563eb;
+        color: #ffffff;
+      }
+    }
+  }
+  
+  .btn-view-details {
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+  }
+  

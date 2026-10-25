@@ -8,6 +8,7 @@ import java.util.List;
 
 public record JobPositionResponse(
         Long id,
+        JobClientResponse client,
         String title,
         String description,
         JobStatusEnum status,
@@ -32,6 +33,7 @@ public record JobPositionResponse(
 
         return new JobPositionResponse(
                 domain.getId(),
+                JobClientResponse.fromDomain(domain.getClient()),
                 domain.getTitle(),
                 domain.getDescription(),
                 domain.getStatus(),

@@ -1,0 +1,164 @@
+<div class="page-layout text-white min-vh-100 d-flex flex-column">
+  <nav class="navbar navbar-expand-lg navbar-dark px-4 py-3 border-bottom border-white border-opacity-10 bg-dark-header">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/home">
+        <span class="logo-badge bg-primary px-2 py-1 rounded fs-6">TN</span>
+        <span class="fs-5 tracking-wide">TN CONSULTORIA</span>
+      </a>
+      <div class="d-flex align-items-center gap-2 ms-auto flex-wrap justify-content-end">
+        <a routerLink="/home" class="nav-link-custom">Home</a>
+        <a routerLink="/jobs" class="nav-link-custom">Vagas</a>
+        <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
+        <a routerLink="/clients" class="nav-link-custom">Clientes</a>
+        <a routerLink="/processes" class="nav-link-custom active">Processos</a>
+        <button type="button" (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-5 flex-grow-1">
+    <div class="content-wrapper mx-auto">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h2 class="fw-bold text-white mb-1">Processos Seletivos</h2>
+          <p class="text-light opacity-75 small mb-0">Acompanhe vagas, clientes e candidatos associados.</p>
+        </div>
+        <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold" (click)="openCreateModal()">
+          Novo Processo
+        </button>
+      </div>
+
+      @if (successMessage) {
+        <div class="alert alert-success border-0 shadow-sm">{{ successMessage }}</div>
+      }
+      @if (errorMessage && !isModalOpen) {
+        <div class="alert alert-danger border-0 shadow-sm">{{ errorMessage }}</div>
+      }
+
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-light" role="status"></div>
+          <p class="mt-3 text-light opacity-75">A carregar processos...</p>
+        </div>
+      }
+
+      @if (!isLoading && processes.length === 0) {
+        <div class="card border-0 shadow-lg p-5 rounded-4 bg-white text-dark text-center">
+          <h4 class="fw-bold">Nenhum processo seletivo</h4>
+          <p class="text-muted mb-4">Associe um cliente a uma vaga para iniciar o processo.</p>
+          <button type="button" class="btn btn-primary rounded-pill px-4 mx-auto" (click)="openCreateModal()">
+            Criar Processo
+          </button>
+        </div>
+      }
+
+      @if (!isLoading && processes.length > 0) {
+        <div class="d-flex flex-column gap-3">
+          @for (process of processes; track process.id) {
+            <a [routerLink]="['/processes', process.id]" class="text-decoration-none">
+              <div class="card entity-card border-0 shadow-lg rounded-4 bg-white text-dark p-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                  <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                      <h5 class="fw-bold mb-0 text-dark">{{ process.jobPosition.title }}</h5>
+                      <span class="badge rounded-pill px-3 py-1" [ngClass]="statusClass(process.status)">
+                        {{ statusLabel(process.status) }}
+                      </span>
+                    </div>
+                    <div class="small text-muted">
+                      <strong class="text-dark">Cliente:</strong> {{ process.client.name }} ({{ process.client.code }})
+                    </div>
+                    <div class="small text-muted mt-1">
+                      <strong class="text-dark">Abertura:</strong> {{ process.openedAt | date:'dd/MM/yyyy' }}
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 align-self-md-center">
+                    <span class="text-muted small">#{{ process.id }}</span>
+                    <span class="btn btn-sm btn-outline-primary rounded-pill px-3">Ver candidatos</span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          }
+        </div>
+
+        @if (totalPages > 1) {
+          <nav class="d-flex justify-content-between align-items-center mt-4" aria-label="Paginação de processos">
+            <button type="button" class="btn btn-outline-light rounded-pill px-4" [disabled]="first || isLoading" (click)="previousPage()">
+              Anterior
+            </button>
+            <span class="text-light opacity-75 small">Página {{ page + 1 }} de {{ totalPages }} · {{ totalElements }} processos</span>
+            <button type="button" class="btn btn-outline-light rounded-pill px-4" [disabled]="last || isLoading" (click)="nextPage()">
+              Seguinte
+            </button>
+          </nav>
+        }
+      }
+    </div>
+  </main>
+
+  @if (isModalOpen) {
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,.6);">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold">Novo Processo Seletivo</h5>
+            <button type="button" class="btn-close" (click)="closeModal()" aria-label="Fechar"></button>
+          </div>
+          <form [formGroup]="processForm" (ngSubmit)="submit()">
+            <div class="modal-body">
+              @if (errorMessage) {
+                <div class="alert alert-danger py-2 small">{{ errorMessage }}</div>
+              }
+              <div class="mb-3">
+                <label class="form-label fw-medium">Vaga <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="jobPositionId" (change)="onJobChange()">
+                  <option [ngValue]="null">Selecione uma vaga...</option>
+                  @for (job of jobs; track job.id) {
+                    <option [ngValue]="job.id">{{ job.title }}</option>
+                  }
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-medium">Cliente <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="clientId">
+                  <option [ngValue]="null">Selecione um cliente...</option>
+                  @for (client of clients; track client.id) {
+                    <option [ngValue]="client.id">{{ client.name }} ({{ client.code }})</option>
+                  }
+                </select>
+                <div class="form-text">O cliente é herdado da vaga selecionada.</div>
+                @if (clients.length === 0) {
+                  <div class="small text-muted mt-1">Nenhum cliente disponível. <a routerLink="/clients">Criar cliente</a>.</div>
+                }
+              </div>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-medium">Estado</label>
+                  <select class="form-select" formControlName="status">
+                    <option value="OPEN">Aberto</option>
+                    <option value="PAUSED">Pausado</option>
+                    <option value="CLOSED">Fechado</option>
+                    <option value="CANCELLED">Cancelado</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-medium">Data de abertura</label>
+                  <input type="date" class="form-control" formControlName="openedAt">
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-outline-secondary rounded-pill px-4" (click)="closeModal()">Cancelar</button>
+              <button type="submit" class="btn btn-primary rounded-pill px-4" [disabled]="isSubmitting">
+                @if (isSubmitting) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                Criar Processo
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+  }
+</div>

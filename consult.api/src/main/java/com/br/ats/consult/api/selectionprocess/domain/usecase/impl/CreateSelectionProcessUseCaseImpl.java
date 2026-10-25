@@ -33,6 +33,11 @@ public class CreateSelectionProcessUseCaseImpl implements CreateSelectionProcess
         process.setJobPosition(jobPositionGateway.findById(process.getJobPosition().getId())
                 .orElseThrow(() -> new JobPositionNotFoundException(process.getJobPosition().getId())));
 
+        if (process.getJobPosition().getClient() == null
+                || !process.getClient().getId().equals(process.getJobPosition().getClient().getId())) {
+            throw new IllegalArgumentException("O cliente do processo seletivo deve ser o mesmo cliente da vaga.");
+        }
+
         if (process.getStatus() == null) {
             process.setStatus(SelectionProcessStatusEnum.OPEN);
         }

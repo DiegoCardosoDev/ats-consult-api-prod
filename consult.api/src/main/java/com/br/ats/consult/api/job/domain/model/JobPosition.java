@@ -1,5 +1,6 @@
 package com.br.ats.consult.api.job.domain.model;
 
+import com.br.ats.consult.api.client.domain.model.Client;
 import com.br.ats.consult.api.job.domain.enums.*;
 import com.br.ats.consult.api.technology.domain.model.Technology;
 import lombok.*;
@@ -14,6 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 public class JobPosition {
     private Long id;
+    private Client client;
     private String title;
     private String description;
     private JobStatusEnum status;
@@ -27,6 +29,9 @@ public class JobPosition {
     private List<Technology> technologies; // IDs das tecnologias exigidas para a vaga
 
     public void validate() {
+        if (client == null || client.getId() == null) {
+            throw new IllegalArgumentException("O cliente da vaga é obrigatório.");
+        }
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("O título da vaga é obrigatório.");
         }

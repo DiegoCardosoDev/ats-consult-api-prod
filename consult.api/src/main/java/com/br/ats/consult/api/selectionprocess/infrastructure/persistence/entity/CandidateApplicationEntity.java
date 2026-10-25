@@ -1,9 +1,12 @@
 package com.br.ats.consult.api.selectionprocess.infrastructure.persistence.entity;
 
 import com.br.ats.consult.api.candidate.infrastructure.persistence.entity.CandidateEntity;
+import com.br.ats.consult.api.selectionprocess.domain.enums.CandidateApplicationStatusEnum;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -22,7 +25,9 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "tb_candidate_applications")
@@ -57,10 +62,20 @@ public class CandidateApplicationEntity {
     @Column(name = "resume_storage_key", nullable = false, length = 255)
     private String resumeStorageKey;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(nullable = false, length = 50)
+    private CandidateApplicationStatusEnum status = CandidateApplicationStatusEnum.TRIAGEM;
+
     @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("position ASC")
     @Builder.Default
     private List<CandidateApplicationAnswerEntity> answers = new ArrayList<>();
+
+    @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("createdAt DESC, id DESC")
+    @Builder.Default
+    private Set<CandidateApplicationCommentEntity> comments = new LinkedHashSet<>();
 
     @CreationTimestamp
     @Column(name = "applied_at", nullable = false, updatable = false)

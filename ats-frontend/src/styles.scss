@@ -1,0 +1,60 @@
+/* Global ATS layout helpers shared by the feature screens. */
+.page-layout {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+}
+
+.bg-dark-header {
+  background-color: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+.tracking-wide {
+  letter-spacing: 1px;
+}
+
+.nav-link-custom {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.nav-link-custom:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link-custom.active {
+  color: #0f172a;
+  background-color: #ffffff;
+  font-weight: 600;
+}
+
+.content-wrapper {
+  max-width: 1080px;
+  width: 100%;
+}
+
+.detail-wrapper {
+  max-width: 900px;
+  width: 100%;
+}
+
+.entity-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.entity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2) !important;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.text-break-all {
+  word-break: break-word;
+}

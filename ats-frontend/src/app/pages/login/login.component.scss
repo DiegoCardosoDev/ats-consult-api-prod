@@ -1,0 +1,107 @@
+.login-background {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    /* Fundo escuro azulado com a imagem de cidade em sobreposição */
+    background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9)), 
+                url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1920&auto=format&fit=crop') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  
+  .login-card {
+    background: #ffffff;
+    padding: 3rem 2.5rem;
+    border-radius: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    width: 100%;
+    max-width: 420px;
+    box-sizing: border-box;
+  
+    h2 {
+      margin-bottom: 2rem;
+      color: #0f172a;
+      font-size: 1.6rem;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: -0.5px;
+    }
+  
+    .form-group {
+      margin-bottom: 1.25rem;
+  
+      .form-control-pill {
+        width: 100%;
+        padding: 0.95rem 1.35rem;
+        background-color: #0f172a; /* Fundo escuro azulado elegante */
+        border: 1.5px solid #1e293b;
+        border-radius: 50px;
+        font-size: 0.95rem;
+        color: #ffffff; /* Texto do utilizador totalmente visível em branco */
+        box-sizing: border-box;
+        transition: all 0.25s ease;
+  
+        &::placeholder {
+          color: #94a3b8; /* Placeholder em cinzento neutro legível */
+        }
+  
+        &:focus {
+          outline: none;
+          border-color: #3b82f6;
+          background-color: #1e293b; /* Ligeiro clareamento ao focar */
+          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+        }
+      }
+    }
+  
+    .alert-error {
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      padding: 0.85rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      margin-bottom: 1.25rem;
+      text-align: center;
+      font-weight: 500;
+    }
+  
+    /* Botão em formato de pílula */
+    .btn-login-pill {
+      width: 100%;
+      padding: 0.95rem;
+      margin-top: 0.75rem;
+      background-color: #2563eb; /* Azul primário moderno para dar destaque ao foco da ação */
+      color: #ffffff;
+      border: none;
+      border-radius: 50px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      transition: all 0.2s ease;
+  
+      &:hover:not(:disabled) {
+        background-color: #1d4ed8;
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+        transform: translateY(-1px);
+      }
+  
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+  
+      &:disabled {
+        background-color: #cbd5e1;
+        color: #94a3b8;
+        box-shadow: none;
+        cursor: not-allowed;
+      }
+    }
+  }
