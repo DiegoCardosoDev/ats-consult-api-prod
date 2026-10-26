@@ -11,9 +11,11 @@
       <div class="d-flex align-items-center gap-3 ms-auto">
         <a routerLink="/home" class="nav-link-custom">Home</a>
         <a routerLink="/jobs" class="nav-link-custom active">Vagas</a>
-        <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
-        <a routerLink="/clients" class="nav-link-custom">Clientes</a>
-        <a routerLink="/processes" class="nav-link-custom">Processos</a>
+        @if (authService.isStaff()) {
+          <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
+          <a routerLink="/clients" class="nav-link-custom">Clientes</a>
+          <a routerLink="/processes" class="nav-link-custom">Processos</a>
+        }
         <button type="button" (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
       </div>
     </div>
@@ -48,7 +50,7 @@
       @if (applicationSuccessMessage) {
         <div class="alert alert-success border-0 shadow-sm mb-4 d-flex flex-wrap align-items-center gap-2">
           <span><i class="bi bi-check-circle-fill me-2"></i>{{ applicationSuccessMessage }}</span>
-          @if (appliedProcessId) {
+          @if (appliedProcessId && authService.isStaff()) {
             <a [routerLink]="['/processes', appliedProcessId]" class="btn btn-sm btn-success rounded-pill px-3 ms-auto">
               Abrir Processo
             </a>
@@ -89,14 +91,17 @@
               <!-- Botões de Editar e Apagar posicionado ao lado/abaixo do salário -->
               <div class="d-flex flex-wrap gap-2 justify-content-md-end">
                 <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="openApplicationModal()">
-                  <i class="bi bi-file-earmark-person-fill"></i> Receber Candidatura
+                  <i class="bi bi-file-earmark-person-fill"></i>
+                  {{ authService.isStaff() ? 'Receber Candidatura' : 'Candidatar-me' }}
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="onEdit(job.id!)">
-                  <i class="bi bi-pencil-fill"></i> Editar
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="onDelete(job.id!)">
-                  <i class="bi bi-trash-fill"></i> Apagar
-                </button>
+                @if (authService.isStaff()) {
+                  <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="onEdit(job.id!)">
+                    <i class="bi bi-pencil-fill"></i> Editar
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="onDelete(job.id!)">
+                    <i class="bi bi-trash-fill"></i> Apagar
+                  </button>
+                }
               </div>
             </div>
           </div>
@@ -159,7 +164,8 @@
             </div>
           </div>
 
-          <!-- Formulário de candidatura associado à vaga -->
+          <!-- Formulário de candidatura associado à vaga (gestão restrita a ADMIN/TECH_RECRUITER) -->
+          @if (authService.isStaff()) {
           <div class="pt-4 border-top">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
               <div>
@@ -235,6 +241,7 @@
               </div>
             }
           </div>
+          }
 
         </div>
       }

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c1a9f4d2-7b6e-4c3a-9f21-8d0e6b7a5c42",
     "name": "ATS TN Consultoria",
-    "description": "Collection da API do ATS (consult.api).\n\nComo usar:\n1. Ajuste `base_url` (padrão http://localhost:8080).\n2. Execute `Autenticação > Login` com um usuário ADMIN ou TECH_RECRUITER. A sessão fica num cookie HttpOnly `ats_session`.\n3. Execute as pastas na ordem: Clientes, Tecnologias, Vagas, Formulário, Processos, Candidaturas/Kanban e Comentários.\n4. As variáveis de ID são preenchidas automaticamente pelos testes das requisições de criação.\n\nAutenticação: sessão opaca no servidor, mantida no cookie HttpOnly `ats_session` (Postman envia o cookie automaticamente).\n\nCSRF: habilitado em produção. Execute `Autenticação > CSRF` antes das escritas. Em desenvolvimento (`spring.profiles.active=dev`) o CSRF está desabilitado.\n\nUploads: nas requisições multipart, selecione um arquivo PDF real no campo `resume` (o placeholder `/path/to/resume.pdf` não existe por padrão).",
+    "description": "Collection da API do ATS (consult.api).\n\nComo usar:\n1. Ajuste `base_url` (padrão http://localhost:8080).\n2. Execute `Autenticação > Login` com um usuário ADMIN ou TECH_RECRUITER. A sessão fica num cookie HttpOnly `ats_session`.\n3. Execute as pastas na ordem: Clientes, Tecnologias, Vagas, Formulário, Processos, Candidaturas/Kanban e Comentários.\n4. As variáveis de ID são preenchidas automaticamente pelos testes das requisições de criação.\n\nAutenticação: o projeto usa sessão opaca no servidor, mantida no cookie HttpOnly `ats_session` (Postman envia o cookie automaticamente). Não há JWT/Bearer.\n\nAutorização: o auto-cadastro público (`POST /api/v1/auth/register`) cria sempre `USER` (candidato). A `Gestão de Usuários` (`/api/v1/admin/users`) exige sessão de `ADMIN` ou `TECH_RECRUITER` e permite escolher o papel.\n\nCSRF: habilitado em produção. Execute `Autenticação > CSRF` antes das escritas. Em desenvolvimento (`spring.profiles.active=dev`) o CSRF está desabilitado.\n\nUploads: nas requisições multipart, selecione um arquivo PDF real no campo `resume` (o placeholder `/path/to/resume.pdf` não existe por padrão).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -101,6 +101,16 @@
     {
       "key": "comment_id",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "managed_user_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "managed_user_email",
+      "value": "novo.recrutador@example.com",
       "type": "string"
     }
   ],
@@ -240,15 +250,19 @@
           "response": []
         },
         {
-          "name": "Registar usuário",
+          "name": "Auto-Cadastro Público (Candidato)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Registo criado', function () {",
+                  "pm.test('Auto-cadastro criado (201)', function () {",
                   "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Resposta confirma o registo', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message).to.be.a('string').and.not.empty;",
                   "});"
                 ]
               }
@@ -264,7 +278,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"novo.usuario.{{$timestamp}}@example.com\",\n  \"password\": \"senhaSegura123\"\n}",
+              "raw": "{\n  \"name\": \"Maria Silva\",\n  \"email\": \"candidato.{{$timestamp}}@example.com\",\n  \"password\": \"SenhaForte1!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -283,7 +297,7 @@
                 "register"
               ]
             },
-            "description": "Cria usuário com papel USER e cria sessão no servidor. Desativado no perfil prod por padrão; habilite com REGISTRATION_ENABLED=true."
+            "description": "Auto-cadastro público. O backend força o papel USER (candidato), ignorando qualquer campo role enviado no payload. Cria a sessão no servidor imediatamente. Desativado no perfil prod por padrão; habilite com REGISTRATION_ENABLED=true. A senha deve ter 8-72 caracteres com maiúscula, minúscula, número e símbolo."
           },
           "response": []
         },
@@ -324,6 +338,104 @@
               ]
             },
             "description": "Invalida a sessão no servidor e limpa o cookie."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Gestão de Usuários",
+      "description": "Rotas administrativas de contas. Exigem sessão válida com papel ADMIN ou TECH_RECRUITER (execute `Autenticação > Login` primeiro). O backend usa cookie `ats_session`, não Bearer/JWT.",
+      "item": [
+        {
+          "name": "Listar usuários",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lista de usuários (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Resposta é uma lista', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Lista utilizadores. Requer sessão de ADMIN ou TECH_RECRUITER."
+          },
+          "response": []
+        },
+        {
+          "name": "Cadastro Administrativo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Usuário administrativo criado (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "if (data.id) { pm.collectionVariables.set('managed_user_id', String(data.id)); }",
+                  "if (data.email) { pm.collectionVariables.set('managed_user_email', data.email); }",
+                  "pm.test('Papel escolhido foi aplicado', function () {",
+                  "  pm.expect(data.role).to.eql('TECH_RECRUITER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"João Recrutador\",\n  \"email\": \"recrutador.{{$timestamp}}@tnconsultoria.com\",\n  \"password\": \"SenhaForte1!\",\n  \"role\": \"TECH_RECRUITER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Cadastro interno. Requer sessão de ADMIN ou TECH_RECRUITER. Permite escolher role ADMIN, TECH_RECRUITER ou USER. A sessão é enviada automaticamente pelo cookie ats_session; quando CSRF_ENABLED=true, o pre-request script da collection adiciona X-XSRF-TOKEN."
           },
           "response": []
         }

@@ -117,7 +117,7 @@ Valida a sessão e consulta o usuário autenticado:
 curl -b cookies.txt http://localhost:8080/api/v1/auth/me
 ```
 
-Resposta esperada: `{"id":1,"email":"admin@tnconsultoria.com","role":"ADMIN"}`.
+Resposta esperada: `{"id":1,"name":"Administrador","email":"admin@tnconsultoria.com","role":"ADMIN"}`.
 
 Termina a sessão (invalida no servidor e limpa o cookie):
 
@@ -167,6 +167,69 @@ docker compose logs -f postgres
 ```
 
 Confirma também se existe outro PostgreSQL a ocupar a porta `5432`.
+
+### FATAL: autenticação do tipo senha falhou para o usuário "postgres"
+
+Esse erro significa que o backend está a tentar ligar-se ao PostgreSQL local com uma credencial inválida. Por omissão, `application.properties` usa:
+
+```text
+DB_URL=jdbc:postgresql://localhost:5432/ats_db
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+```
+
+Se o teu PostgreSQL local usa outra senha, tens três opções.
+
+**Opção 1: informar a senha real ao arrancar**
+
+```bash
+cd /home/diegocardoso/Documentos/ats-api-manager/consult.api
+
+export DB_URL='jdbc:postgresql://localhost:5432/ats_db'
+export DB_USERNAME='postgres'
+export DB_PASSWORD='SUA_SENHA_REAL'
+export SPRING_PROFILES_ACTIVE=dev
+
+./mvnw spring-boot:run
+```
+
+**Opção 2: redefinir a senha do PostgreSQL local para `postgres`**
+
+```bash
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+sudo -u postgres createdb ats_db 2>/dev/null || true
+```
+
+Depois arranca o backend normalmente. Atenção: isto altera a senha do usuário `postgres` e pode afetar outros projetos que usem o mesmo servidor local.
+
+**Opção 3: usar o PostgreSQL do Docker do projeto**
+
+O Docker publica a porta `5432`; se já houver um PostgreSQL local a correr, para-o primeiro:
+
+```bash
+sudo systemctl stop postgresql
+cd /home/diegocardoso/Documentos/ats-api-manager/consult.api
+docker compose up -d
+docker compose ps
+```
+
+O container usa `postgres` / `postgres` e cria a base `ats_db` automaticamente.
+
+Se o volume do container já tiver sido criado com outra senha, recria-o:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+Atenção: `down -v` apaga os dados locais do volume PostgreSQL.
+
+Para confirmar qual servidor está a responder na porta `5432`:
+
+```bash
+pg_isready
+psql -h localhost -U postgres -d ats_db
+```
 
 ### Docker: permission denied
 

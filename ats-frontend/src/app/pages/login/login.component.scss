@@ -104,4 +104,21 @@
         cursor: not-allowed;
       }
     }
+
+    .register-link {
+      text-align: center;
+      font-size: 0.875rem;
+      color: #64748b;
+      margin: 1.25rem 0 0;
+
+      a {
+        color: #2563eb;
+        font-weight: 600;
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
   }

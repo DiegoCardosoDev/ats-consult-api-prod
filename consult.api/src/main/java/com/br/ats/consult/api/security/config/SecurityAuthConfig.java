@@ -115,11 +115,16 @@ public class SecurityAuthConfig {
                         .requestMatchers(HttpMethod.GET, "/auth/me", "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/auth/logout", "/api/v1/auth/logout").authenticated()
 
+                        .requestMatchers("/api/v1/admin/users", "/api/v1/admin/users/**")
+                        .hasAnyRole("ADMIN", "TECH_RECRUITER")
+
                         .requestMatchers("/", "/index.html", "/favicon.ico", "/assets/**",
                                 "/*.js", "/*.css", "/*.map", "/*.ico", "/*.png", "/*.svg", "/*.webmanifest").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/login", "/home", "/jobs", "/jobs/**",
-                                "/candidates", "/clients", "/processes", "/processes/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/login", "/register", "/home", "/jobs", "/jobs/**",
+                                "/candidates", "/clients", "/processes", "/processes/**",
+                                "/users", "/users/**", "/privacidade").permitAll()
 
+                        .requestMatchers(HttpMethod.POST, "/api/v1/job-positions/*/applications").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/job-positions/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/job-positions/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/job-positions/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
@@ -133,21 +138,21 @@ public class SecurityAuthConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/clients/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/clients/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/clients/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/clients/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/clients/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/candidates/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/candidates/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/candidates/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/candidates/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/candidates/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/selection-processes/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/selection-processes/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/selection-processes/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/selection-processes/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/selection-processes/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/applications/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/applications/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/applications/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/applications/*/comments").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/applications/*/comments").hasAnyRole("ADMIN", "TECH_RECRUITER")
 
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()

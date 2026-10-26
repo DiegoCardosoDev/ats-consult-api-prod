@@ -148,6 +148,57 @@ class SecurityAuthorizationTest {
                 .andExpect(status().isTooManyRequests());
     }
 
+
+    @Test
+    void regularUserCanReadJobsButCannotListManagementAreas() throws Exception {
+        mockMvc.perform(get("/api/v1/job-positions")
+                        .with(user("candidate").roles("USER")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/clients")
+                        .with(user("candidate").roles("USER")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/candidates")
+                        .with(user("candidate").roles("USER")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/selection-processes")
+                        .with(user("candidate").roles("USER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void regularUserCannotManageApplicationFormsOrApplications() throws Exception {
+        mockMvc.perform(put("/api/v1/job-positions/1/application-form")
+                        .with(user("candidate").roles("USER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Formulário","active":true,"questions":[]}
+                                """))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/v1/job-positions/1/application-form")
+                        .with(user("candidate").roles("USER"))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/applications/1")
+                        .with(user("candidate").roles("USER")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/applications/1/comments")
+                        .with(user("candidate").roles("USER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"message":"Comentário"}
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void regularUserCannotCreateJobPosition() throws Exception {
         mockMvc.perform(post("/api/v1/job-positions")

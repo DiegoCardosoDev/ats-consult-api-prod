@@ -27,7 +27,7 @@ class RegistrationDisabledTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"new-user@example.com","password":"valid-password"}
+                                {"name":"Novo Usuario","email":"new-user@example.com","password":"Valid-password1"}
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("O auto-registo está desativado."));

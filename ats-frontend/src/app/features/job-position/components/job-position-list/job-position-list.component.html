@@ -10,11 +10,15 @@
 
       <div class="d-flex align-items-center gap-3 ms-auto">
         <a routerLink="/home" class="nav-link-custom">Home</a>
-        <a routerLink="/jobs/new" class="nav-link-custom">Cadastrar Vaga</a>
+        @if (authService.isStaff()) {
+          <a routerLink="/jobs/new" class="nav-link-custom">Cadastrar Vaga</a>
+        }
         <a routerLink="/jobs" class="nav-link-custom active">Vagas</a>
-        <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
-        <a routerLink="/clients" class="nav-link-custom">Clientes</a>
-        <a routerLink="/processes" class="nav-link-custom">Processos</a>
+        @if (authService.isStaff()) {
+          <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
+          <a routerLink="/clients" class="nav-link-custom">Clientes</a>
+          <a routerLink="/processes" class="nav-link-custom">Processos</a>
+        }
         <button type="button" (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
       </div>
     </div>
@@ -60,11 +64,13 @@
           <i class="bi bi-briefcase fs-1 text-muted mb-3"></i>
           <h4 class="fw-bold">Nenhuma vaga encontrada</h4>
           <p class="text-muted mb-4">Ainda não existem oportunidades cadastradas no sistema.</p>
-          <div>
-            <a routerLink="/jobs/new" class="btn btn-primary rounded-pill px-4 py-2 fw-semibold">
-              Cadastrar Primeira Vaga
-            </a>
-          </div>
+          @if (authService.isStaff()) {
+            <div>
+              <a routerLink="/jobs/new" class="btn btn-primary rounded-pill px-4 py-2 fw-semibold">
+                Cadastrar Primeira Vaga
+              </a>
+            </div>
+          }
         </div>
       }
 

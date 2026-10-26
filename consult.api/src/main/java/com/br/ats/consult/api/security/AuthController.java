@@ -2,7 +2,7 @@ package com.br.ats.consult.api.security;
 
 import com.br.ats.consult.api.security.dto.AuthUserResponse;
 import com.br.ats.consult.api.security.dto.MessageResponse;
-import com.br.ats.consult.api.security.dto.RegisterRequest;
+import com.br.ats.consult.api.security.dto.RegisterCandidateDTO;
 import com.br.ats.consult.api.security.model.User;
 import com.br.ats.consult.api.security.model.UserPrincipal;
 import com.br.ats.consult.api.security.service.AuthService;
@@ -54,6 +54,7 @@ public class AuthController {
         }
         return ResponseEntity.ok(new AuthUserResponse(
                 principal.getId(),
+                principal.getName(),
                 principal.getUsername(),
                 principal.getRole().name()
         ));
@@ -87,7 +88,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterRequest request,
+    public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterCandidateDTO request,
                                                     HttpServletRequest httpRequest,
                                                     HttpServletResponse response) {
         if (!registrationEnabled) {

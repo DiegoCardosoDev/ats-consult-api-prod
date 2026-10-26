@@ -14,13 +14,15 @@ public final class UserPrincipal implements UserDetails, Serializable {
     private static final long serialVersionUID = 1L;
 
     private final Long id;
+    private final String name;
     private final String email;
     private final String password;
     private final Role role;
     private final boolean enabled;
 
-    private UserPrincipal(Long id, String email, String password, Role role, boolean enabled) {
+    private UserPrincipal(Long id, String name, String email, String password, Role role, boolean enabled) {
         this.id = id;
+        this.name = name;
         this.email = email;
         this.password = password;
         this.role = Objects.requireNonNull(role, "A role do utilizador é obrigatória");
@@ -31,6 +33,7 @@ public final class UserPrincipal implements UserDetails, Serializable {
         Objects.requireNonNull(user, "O utilizador não pode ser nulo");
         return new UserPrincipal(
                 user.getId(),
+                user.getName(),
                 user.getEmail(),
                 user.getPassword(),
                 user.getRole(),
@@ -40,6 +43,10 @@ public final class UserPrincipal implements UserDetails, Serializable {
 
     public Long getId() {
         return id;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public Role getRole() {

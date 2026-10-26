@@ -11,7 +11,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class HomeComponent {
 
-  constructor(private authService: AuthService) {}
+  constructor(public authService: AuthService) {}
 
   logout(): void {
     this.authService.logout(); // Chama o serviço que limpa o token e redireciona para /login

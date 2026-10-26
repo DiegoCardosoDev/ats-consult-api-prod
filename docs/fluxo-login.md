@@ -43,7 +43,9 @@ Os endpoints existem em dois prefixos equivalentes: `/auth/...` e `/api/v1/auth/
 | --- | --- | --- | --- | --- |
 | `GET` | `/auth/csrf` | Público | Não | Gera/renova o cookie `XSRF-TOKEN` |
 | `POST` | `/auth/login` | Público | Sim | Valida credenciais e cria a sessão |
-| `POST` | `/auth/register` | Público, se habilitado | Sim | Cria um `USER` e já cria a sessão |
+| `POST` | `/auth/register` | Público, se habilitado | Sim | Auto-cadastro: cria um `USER` e já cria a sessão |
+| `GET` | `/api/v1/admin/users` | `ADMIN` ou `TECH_RECRUITER` | Não | Lista utilizadores |
+| `POST` | `/api/v1/admin/users` | `ADMIN` ou `TECH_RECRUITER` | Sim | Cria utilizador com papel explícito |
 | `GET` | `/auth/me` | Sessão válida | Não | Devolve `id`, `email` e `role` |
 | `POST` | `/auth/logout` | Sessão válida | Sim | Invalida a sessão e limpa o cookie |
 
@@ -195,18 +197,35 @@ Os limites padrão ficam em `application.properties`:
 
 Ao exceder o limite, a API responde `429 Too Many Requests` com `Retry-After`. Os contadores ficam em memória e são reiniciados quando a aplicação reinicia.
 
-## 11. Registo
+## 11. Registo e gestão de utilizadores
+
+### Auto-cadastro público
 
 `POST /auth/register` segue o mesmo modelo de sessão:
 
 1. Só funciona quando `REGISTRATION_ENABLED=true`.
 2. Aplica rate limit por IP e por conta.
-3. Normaliza o e-mail e verifica duplicidade.
-4. Cria o utilizador com role `USER` e palavra-passe BCrypt.
-5. Cria a sessão imediatamente.
-6. Responde `201 Created`.
+3. Valida `name`, `email` e `password` (`RegisterCandidateDTO`); a senha deve ter 8 a 72 caracteres, com maiúscula, minúscula, número e símbolo.
+4. Normaliza o e-mail e verifica duplicidade.
+5. Cria o utilizador com role `USER` e palavra-passe BCrypt. O `role` é forçado no serviço; o DTO público não o expõe.
+6. Cria a sessão imediatamente.
+7. Responde `201 Created`.
 
-Em `prod`, o auto-registo vem desativado por padrão.
+Em `prod`, o auto-registo vem desativado por padrão (`REGISTRATION_ENABLED=false`).
+
+### Cadastro administrativo
+
+`POST /api/v1/admin/users` usa a mesma sessão, mas exige `ROLE_ADMIN` ou `ROLE_TECH_RECRUITER`:
+
+1. O `SecurityFilterChain` bloqueia `/api/v1/admin/users` para utilizadores anónimos ou `USER`.
+2. O `@PreAuthorize` do `AdminUserController` repete a verificação por defesa em profundidade.
+3. O `CreateUserAdminDTO` exige `name`, `email`, `password` e `role` (`ADMIN`, `TECH_RECRUITER` ou `USER`).
+4. O serviço normaliza o e-mail, verifica duplicidade, cifra a senha com BCrypt e grava o papel escolhido.
+5. Responde `201 Created` com `id`, `name`, `email`, `role` e `enabled`.
+
+`GET /api/v1/admin/users` devolve a lista de contas para a tela de gestão de utilizadores.
+
+> Não existe emissão de JWT neste projeto. O fluxo administrativo e a collection do Postman reutilizam o cookie de sessão `ats_session`.
 
 ## 12. Respostas de erro relevantes
 

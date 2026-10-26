@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 
 export interface AuthUser {
   id: number;
+  name: string | null;
   email: string;
   role: 'ADMIN' | 'TECH_RECRUITER' | 'USER';
 }
@@ -31,7 +32,7 @@ export class AuthService {
     );
   }
 
-  register(credentials: { email: string; password: string }): Observable<AuthUser> {
+  register(credentials: { name: string; email: string; password: string }): Observable<AuthUser> {
     return this.ensureCsrfToken().pipe(
       switchMap(() => this.http.post<unknown>(`${this.apiUrl}/register`, credentials)),
       switchMap(() => this.me())
@@ -60,6 +61,15 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     return this.currentUserState() !== null;
+  }
+
+  isStaff(): boolean {
+    const role = this.currentUserState()?.role;
+    return role === 'ADMIN' || role === 'TECH_RECRUITER';
+  }
+
+  isCandidate(): boolean {
+    return this.currentUserState()?.role === 'USER';
   }
 
   clearSession(): void {

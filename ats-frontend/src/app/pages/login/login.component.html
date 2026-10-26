@@ -31,6 +31,10 @@
         <button type="submit" [disabled]="loginForm.invalid || isSubmitting" class="btn-login-pill">
           {{ isSubmitting ? 'A entrar...' : 'Entrar' }}
         </button>
+
+        <p class="register-link">
+          Ainda não tem conta? <a routerLink="/register">Cadastre-se como candidato</a>
+        </p>
   
       </form>
     </div>

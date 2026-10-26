@@ -16,7 +16,7 @@ import { extractApiErrorMessage } from '../../../../core/utils/api-error.util';
 })
 export class JobPositionListComponent implements OnInit {
   private jobPositionService = inject(JobPositionService);
-  private authService = inject(AuthService);
+  readonly authService = inject(AuthService);
 
   jobs: JobPosition[] = [];
   isLoading = true;

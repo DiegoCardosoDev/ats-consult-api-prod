@@ -39,6 +39,7 @@ public class InitialDataConfig {
             String normalizedEmail = adminEmail.trim().toLowerCase(Locale.ROOT);
             if (!userRepository.existsByEmail(normalizedEmail)) {
                 User admin = User.builder()
+                        .name("Administrador")
                         .email(normalizedEmail)
                         .password(passwordEncoder.encode(adminPassword))
                         .role(Role.ADMIN)

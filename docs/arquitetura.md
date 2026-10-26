@@ -59,7 +59,7 @@ ats-api-manager/
 │   │   ├── candidate/                # Cadastro e busca de candidatos
 │   │   ├── client/                   # Cadastro e busca de clientes
 │   │   ├── job/                      # Vagas, localização, tecnologias e enums
-│   │   ├── security/                 # Login, sessão, cookies, CSRF e rate limit
+│   │   ├── security/                 # Login, sessão, cookies, CSRF, rate limit e utilizadores
 │   │   ├── selectionprocess/         # Processos, candidaturas, Kanban e comentários
 │   │   ├── shared/                   # Erros de API, paginação e SPA forward
 │   │   ├── technology/               # Catálogo de tecnologias
@@ -69,15 +69,16 @@ ats-api-manager/
 │   │   ├── application.properties
 │   │   ├── application-dev.properties
 │   │   ├── application-prod.properties
-│   │   └── db/migration/             # Flyway V1..V9
+│   │   └── db/migration/             # Flyway V1..V16
 │   └── src/test/java/                # Testes de contexto, segurança e integração
 ├── ats-frontend/
 │   └── src/
 │       ├── app/
 │       │   ├── core/                 # Guard, interceptor, modelos e utilitários
 │       │   ├── features/             # application-form, candidate, client, home,
-│       │   │                         # job-position, selection-process, technology
+│       │   │                         # job-position, selection-process, technology, user
 │       │   ├── pages/login/
+│       │   ├── pages/register/       # Auto-cadastro público de candidato
 │       │   ├── services/             # AuthService
 │       │   ├── shared/
 │       │   ├── app.config.ts
@@ -169,7 +170,7 @@ erDiagram
 | `tb_candidate_application_answers` | Respostas do formulário vinculadas à candidatura |
 | `tb_candidate_application_comments` | Comentários com `author_id`, `author_email`, mensagem e data |
 | `tb_application_forms` / `tb_application_form_questions` | Formulário ativo/inativo e perguntas por vaga, incluindo metadados do template (`question_key`, categoria, tecnologia pai, `max_selections`, `system_generated`) |
-| `tb_users` | Usuários com papel `ADMIN`, `TECH_RECRUITER` ou `USER` |
+| `tb_users` | Utilizadores com `full_name`, e-mail único, hash BCrypt, papel `ADMIN`, `TECH_RECRUITER` ou `USER` e flag `enabled` |
 
 ### Relacionamentos e restrições relevantes
 
@@ -201,6 +202,7 @@ erDiagram
 | `V13` | Permite `VERSION_CONTROL` nas perguntas de tecnologia do formulário |
 | `V14` | Guarda a chave da pergunta nas respostas para tradução no frontend |
 | `V15` | Consentimento LGPD nas candidaturas (aceite, data/hora, versão e IP) |
+| `V16` | Nome completo (`full_name`) dos utilizadores |
 
 > A `V9` faz backfill de vagas antigas: cria `Cliente Padrão` se não existir cliente e associa as vagas sem `client_id` ao primeiro cliente disponível antes de aplicar `NOT NULL`.
 
@@ -219,6 +221,27 @@ erDiagram
 - A resposta do candidato inclui as tecnologias resolvidas (`id`, `name`, `category`, `parentId`).
 - No `PUT /api/v1/candidates/{id}`, os campos de perfil enviados substituem os anteriores; campos de perfil omitidos são limpos.
 - No fluxo de candidatura, o perfil é enriquecido com as respostas de identificação (`FULL_NAME`, `AGE`, `ROLE`, `EMAIL`, `PHONE`), LinkedIn, endereço, formação, inglês e tecnologias, sem duplicar tecnologias.
+
+### Contas e hierarquia de perfis
+
+O sistema tem três perfis, do menor para o maior nível de privilégio:
+
+| Papel técnico | Rótulo na interface | Capacidades |
+| --- | --- | --- |
+| `USER` | Candidato | Auto-cadastro público; pode consultar vagas, abrir o formulário de candidatura e candidatar-se. Não acede a clientes, candidatos, processos, comentários, gestão de vagas nem gestão de utilizadores |
+| `TECH_RECRUITER` | Tech Recruiter | Gestão de clientes, tecnologias, vagas, candidatos, processos, Kanban e utilizadores |
+| `ADMIN` | Administrador | Todas as capacidades do `TECH_RECRUITER`, incluindo governação de contas |
+
+Regras de criação de conta:
+
+- `POST /api/v1/auth/register` é público e **força `USER` no backend**. O DTO público não possui o campo `role`; qualquer `role` enviado no JSON é ignorado pelo Jackson e nunca chega ao serviço.
+- `POST /api/v1/admin/users` é privado e exige sessão válida com `ADMIN` ou `TECH_RECRUITER`. Apenas este fluxo permite escolher explicitamente `ADMIN`, `TECH_RECRUITER` ou `USER`.
+- `GET /api/v1/admin/users` lista as contas e também exige `ADMIN` ou `TECH_RECRUITER`.
+- O e-mail é normalizado para minúsculas antes da verificação de duplicidade e da gravação; a base mantém a restrição `UNIQUE`.
+- Todas as palavras-passe são guardadas com `BCryptPasswordEncoder`; nunca são devolvidas pela API.
+- A senha deve ter entre 8 e 72 caracteres e conter maiúscula, minúscula, número e caractere especial.
+- O nome completo é obrigatório no auto-cadastro e no cadastro administrativo (3 a 150 caracteres).
+- O auto-cadastro público pode ser desativado em produção com `REGISTRATION_ENABLED=false`; o cadastro administrativo continua disponível para os perfis autorizados.
 
 ### Processo seletivo
 
@@ -326,16 +349,63 @@ Paginação (`PageResponse`): `content`, `page`, `size`, `totalElements`, `total
 | GET | `/auth/csrf` ou `/api/v1/auth/csrf` | Público | Gera cookie CSRF |
 | POST | `/auth/login` ou `/api/v1/auth/login` | Público | Login; cria sessão e retorna `Set-Cookie: ats_session` |
 | GET | `/auth/me` ou `/api/v1/auth/me` | Autenticado | Valida a sessão e devolve `id`, `email` e `role` |
-| POST | `/auth/register` ou `/api/v1/auth/register` | Público | Registo com papel `USER`; desativado em `prod` por padrão |
+| POST | `/auth/register` ou `/api/v1/auth/register` | Público | Auto-cadastro com papel fixo `USER`; desativado em `prod` por padrão |
 | POST | `/auth/logout` ou `/api/v1/auth/logout` | Autenticado | Invalida a sessão no servidor e limpa o cookie |
+
+#### Auto-cadastro público (`RegisterCandidateDTO`)
+
+`POST /api/v1/auth/register`
+
+```json
+{
+  "name": "Maria Silva",
+  "email": "maria@example.com",
+  "password": "SenhaForte1!"
+}
+```
+
+| Campo | Obrigatório | Validação |
+| --- | --- | --- |
+| `name` | Sim | 3 a 150 caracteres |
+| `email` | Sim | formato de e-mail, até 255 caracteres, único |
+| `password` | Sim | 8 a 72 caracteres, com maiúscula, minúscula, número e símbolo |
+
+Resposta: `201 Created`. O papel atribuído é sempre `USER`, independentemente de qualquer campo extra no payload. O utilizador fica autenticado com sessão imediatamente após o registo.
+
+#### Gestão de utilizadores (`CreateUserAdminDTO`)
+
+| Método | Caminho | Acesso | Descrição |
+| --- | --- | --- | --- |
+| GET | `/api/v1/admin/users` | `ADMIN`, `TECH_RECRUITER` | Lista utilizadores com `id`, `name`, `email`, `role` e `enabled` |
+| POST | `/api/v1/admin/users` | `ADMIN`, `TECH_RECRUITER` | Cria uma conta e permite escolher o papel |
+
+`POST /api/v1/admin/users`
+
+```json
+{
+  "name": "João Recrutador",
+  "email": "joao@tnconsultoria.com",
+  "password": "SenhaForte1!",
+  "role": "TECH_RECRUITER"
+}
+```
+
+| Campo | Obrigatório | Validação |
+| --- | --- | --- |
+| `name` | Sim | 3 a 150 caracteres |
+| `email` | Sim | formato de e-mail, até 255 caracteres, único |
+| `password` | Sim | 8 a 72 caracteres, com maiúscula, minúscula, número e símbolo |
+| `role` | Sim | `ADMIN`, `TECH_RECRUITER` ou `USER` |
+
+Resposta: `201 Created` com o utilizador criado. E-mail duplicado retorna `409 Conflict`; falta de autenticação retorna `401`; papel insuficiente retorna `403`.
 
 ### Clientes
 
 | Método | Caminho | Acesso |
 | --- | --- | --- |
 | POST | `/api/v1/clients` | `ADMIN`, `TECH_RECRUITER` |
-| GET | `/api/v1/clients` | Autenticado |
-| GET | `/api/v1/clients/{id}` | Autenticado |
+| GET | `/api/v1/clients` | `ADMIN`, `TECH_RECRUITER` |
+| GET | `/api/v1/clients/{id}` | `ADMIN`, `TECH_RECRUITER` |
 
 ### Tecnologias
 
@@ -362,27 +432,27 @@ Paginação (`PageResponse`): `content`, `page`, `size`, `totalElements`, `total
 | --- | --- | --- | --- |
 | POST | `/api/v1/candidates` | `ADMIN`, `TECH_RECRUITER` | Cria ou atualiza por e-mail no fluxo de candidatura |
 | PUT | `/api/v1/candidates/{id}` | `ADMIN`, `TECH_RECRUITER` | Atualiza dados e perfil do candidato |
-| GET | `/api/v1/candidates` | Autenticado | Filtros `name`, `role`; paginação |
-| GET | `/api/v1/candidates/{id}` | Autenticado | Inclui `educationLevel`, `englishLevel` e `technologies` |
+| GET | `/api/v1/candidates` | `ADMIN`, `TECH_RECRUITER` | Filtros `name`, `role`; paginação |
+| GET | `/api/v1/candidates/{id}` | `ADMIN`, `TECH_RECRUITER` | Inclui `educationLevel`, `englishLevel` e `technologies` |
 
 ### Processos seletivos
 
 | Método | Caminho | Acesso | Observação |
 | --- | --- | --- | --- |
 | POST | `/api/v1/selection-processes` | `ADMIN`, `TECH_RECRUITER` | `clientId` deve ser o cliente da vaga |
-| GET | `/api/v1/selection-processes` | Autenticado | Paginado; ordenação padrão `openedAt DESC` |
-| GET | `/api/v1/selection-processes/{id}` | Autenticado | Inclui candidaturas, status, respostas e comentários |
+| GET | `/api/v1/selection-processes` | `ADMIN`, `TECH_RECRUITER` | Paginado; ordenação padrão `openedAt DESC` |
+| GET | `/api/v1/selection-processes/{id}` | `ADMIN`, `TECH_RECRUITER` | Inclui candidaturas, status, respostas e comentários |
 | POST | `/api/v1/selection-processes/{id}/candidates` | `ADMIN`, `TECH_RECRUITER` | `multipart/form-data`; exige `consent` |
 
 ### Candidaturas
 
 | Método | Caminho | Acesso | Observação |
 | --- | --- | --- | --- |
-| POST | `/api/v1/job-positions/{jobId}/applications` | `ADMIN`, `TECH_RECRUITER` | Candidatura por vaga; herda o cliente; exige `consent` |
-| GET | `/api/v1/applications/{id}/resume` | Autenticado | Download do PDF |
+| POST | `/api/v1/job-positions/{jobId}/applications` | Autenticado (`USER` incluso) | Candidatura por vaga; herda o cliente; exige `consent` |
+| GET | `/api/v1/applications/{id}/resume` | `ADMIN`, `TECH_RECRUITER` | Download do PDF |
 | PATCH | `/api/v1/applications/{id}/status` | `ADMIN`, `TECH_RECRUITER` | Move no Kanban |
-| GET | `/api/v1/applications/{id}/comments` | Autenticado | Mais recentes primeiro |
-| POST | `/api/v1/applications/{id}/comments` | Autenticado | Autor vem da sessão |
+| GET | `/api/v1/applications/{id}/comments` | `ADMIN`, `TECH_RECRUITER` | Mais recentes primeiro |
+| POST | `/api/v1/applications/{id}/comments` | `ADMIN`, `TECH_RECRUITER` | Autor vem da sessão |
 
 #### Payload de candidatura (`multipart/form-data`)
 
@@ -478,6 +548,8 @@ Perguntas geradas expõem os metadados `questionKey`, `technologyCategory`, `par
 
 ### Autenticação
 
+> O projeto **não utiliza JWT**. A autenticação é feita por sessão opaca no servidor, conforme descrito em [`fluxo-login.md`](./fluxo-login.md). Os endpoints administrativos usam a mesma sessão dos restantes endpoints protegidos; a collection do Postman autentica-se pelo cookie `ats_session`, não por `Authorization: Bearer`.
+
 - A autenticação usa uma sessão opaca no servidor; o navegador guarda apenas o ID de sessão no cookie `ats_session`:
   - `HttpOnly`
   - `Secure` obrigatório em produção
@@ -503,11 +575,15 @@ Fluxo de login:
 
 ### Autorização
 
-- Papéis: `ADMIN`, `TECH_RECRUITER`, `USER`.
-- Escritas de clientes, tecnologias, vagas, candidatos e processos exigem `ADMIN` ou `TECH_RECRUITER`.
+- Papéis: `ADMIN`, `TECH_RECRUITER`, `USER` (candidato).
+- `POST /auth/register` é público; o backend força `USER`.
+- `/api/v1/admin/users` e `/api/v1/admin/users/**` exigem `ADMIN` ou `TECH_RECRUITER` tanto no `SecurityFilterChain` como em `@PreAuthorize` (defesa em profundidade).
+- Escritas de clientes, tecnologias, vagas, candidatos, processos e formulários exigem `ADMIN` ou `TECH_RECRUITER`.
 - Movimentação no Kanban (`PATCH`) exige `ADMIN` ou `TECH_RECRUITER`.
-- Comentários podem ser criados por qualquer usuário autenticado.
-- Leituras exigem autenticação; rotas de SPA e assets são públicas.
+- Comentários de candidatura são de leitura e escrita exclusivas de `ADMIN`/`TECH_RECRUITER`.
+- `USER` pode ler vagas e o formulário de candidatura e executar `POST /api/v1/job-positions/{jobId}/applications`; esta rota é a exceção de candidatura antes da regra genérica de escrita de vagas.
+- `USER` recebe `403` em `GET /api/v1/clients/**`, `GET /api/v1/candidates/**`, `GET /api/v1/selection-processes/**` e `GET /api/v1/applications/**`, bem como em todas as escritas administrativas.
+- As rotas de SPA e assets são públicas; a autorização efetiva ocorre nos guards do Angular e nos endpoints da API.
 
 ### CSRF
 
@@ -549,7 +625,12 @@ Fluxo de login:
 - `csrf.interceptor.ts` obtém o cookie `XSRF-TOKEN` e injeta `X-XSRF-TOKEN` nas requisições mutáveis.
 - `auth.interceptor.ts` adiciona `withCredentials` e limpa a sessão/redireciona em `401`.
 - `auth.guard.ts` valida a sessão no backend via `/auth/me` antes de liberar rotas autenticadas.
+- `role.guard.ts` valida o papel do utilizador em `route.data.roles`; `/jobs/new`, `/jobs/edit/:id`, `/candidates`, `/clients`, `/processes`, `/processes/:id` e `/users` exigem `ADMIN` ou `TECH_RECRUITER`.
+- `AuthService.isStaff()` centraliza a verificação de `ADMIN`/`TECH_RECRUITER`; os menus e botões de gestão só são renderizados para esses perfis.
+- O candidato (`USER`) vê apenas Home, Vagas e o detalhe da vaga com a ação **Candidatar-me**; criação/edição/exclusão de vagas, clientes, candidatos, processos e formulários não aparecem na interface.
 - A rota `/privacidade` é pública para consulta antes do envio da candidatura.
+- A rota `/register` é pública e apresenta o formulário de auto-cadastro de candidato (`USER`), sem seletor de papel.
+- A rota `/users` é interna, com tabela de utilizadores e modal de criação que permite escolher `ADMIN`, `TECH_RECRUITER` ou `USER`.
 - Serviços por feature (`job-position.service.ts`, `selection-process.service.ts`, etc.) usam `environment.apiBaseUrl`.
 
 ### Módulo de processos seletivos
@@ -623,6 +704,7 @@ npm run build
 
 - `ApplicationTests`: carregamento do contexto Spring.
 - `SecurityAuthorizationTest`: autenticação, `/auth/me`, autorização por papel, CSRF, rate limit e validação de vaga com cliente.
+- `UserManagementIntegrationTest`: auto-cadastro forçado para `USER`, rejeição de senha fraca, bloqueio de utilizadores anónimos/`USER` e criação/listagem administrativa por `ADMIN`/`TECH_RECRUITER`.
 - `RegistrationDisabledTest`: garante que o auto-registo retorna 403 quando desativado.
 - `CandidateSelectionProcessIntegrationTest`: candidatura por vaga/processo, currículo, formulário, busca, download, Kanban e comentários.
 
@@ -640,6 +722,8 @@ mvn test
 - A coleção de comentários na entidade JPA é `Set` para evitar `MultipleBagFetchException` ao buscar `answers` e `comments` juntos.
 - A vaga antiga sem cliente é migrada para um cliente padrão na `V9`.
 - O cadastro público cria usuários `USER` apenas quando `REGISTRATION_ENABLED=true`; em `prod` vem desativado. Para operar escritas é necessário um usuário `ADMIN` ou `TECH_RECRUITER`.
+- O cadastro administrativo é o único fluxo que aceita um papel explícito; o DTO público não expõe `role`, e o serviço força `USER`.
+- A aplicação mantém autenticação por sessão e não emite JWT; a collection do Postman usa cookies e CSRF, não `Bearer`.
 - A sessão no frontend é validada por `/auth/me`; `localStorage` não é usado como prova de autenticação.
 - O cookie de sessão é `HttpOnly` e o CSRF usa cookie separado `XSRF-TOKEN`, conforme o padrão double-submit do Spring Security.
 - A sessão é mantida em memória no servidor; reinícios encerram sessões e múltiplas réplicas exigem store compartilhado (Spring Session/Redis).

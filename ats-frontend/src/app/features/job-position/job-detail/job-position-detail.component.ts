@@ -22,7 +22,7 @@ export class JobPositionDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private jobPositionService = inject(JobPositionService);
-  private authService = inject(AuthService);
+  readonly authService = inject(AuthService);
   private applicationFormService = inject(ApplicationFormService);
 
   job?: JobPosition;

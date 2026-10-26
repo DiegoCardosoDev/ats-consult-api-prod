@@ -1,6 +1,6 @@
 package com.br.ats.consult.api.security.service;
 
-import com.br.ats.consult.api.security.dto.RegisterRequest;
+import com.br.ats.consult.api.security.dto.RegisterCandidateDTO;
 import com.br.ats.consult.api.security.exception.EmailAlreadyRegisteredException;
 import com.br.ats.consult.api.security.model.Role;
 import com.br.ats.consult.api.security.model.User;
@@ -20,7 +20,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public User register(RegisterRequest request) {
+    public User register(RegisterCandidateDTO request) {
         String email = normalizeEmail(request.email());
 
         if (userRepository.existsByEmail(email)) {
@@ -28,6 +28,7 @@ public class AuthService {
         }
 
         User newUser = User.builder()
+                .name(request.name().trim())
                 .email(email)
                 .password(passwordEncoder.encode(request.password()))
                 .role(Role.USER)

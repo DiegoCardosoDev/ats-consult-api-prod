@@ -404,6 +404,31 @@ class CandidateSelectionProcessIntegrationTest {
                 .andExpect(jsonPath("$.candidates[0].comments[0].message").value("Entrevista agendada."));
     }
 
+
+    @Test
+    void regularUserCanApplyToJob() throws Exception {
+        long clientId = createClient("11222333001290", "CLI-012");
+        long jobId = createJob("Vaga para Candidato", clientId);
+
+        mockMvc.perform(get("/api/v1/job-positions/{jobId}", jobId)
+                        .with(user("candidate").roles("USER")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/job-positions/{jobId}/application-form", jobId)
+                        .with(user("candidate").roles("USER")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(multipart("/api/v1/job-positions/{jobId}/applications", jobId)
+                        .file(jsonCandidate("Candidato User", "candidato.user@example.com"))
+                        .file(pdfFile())
+                        .file(consentFile())
+                        .file(answersFile(jobId, "Candidato User", "candidato.user@example.com"))
+                        .with(user("candidate").roles("USER"))
+                        .with(csrf()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.application.candidate.email").value("candidato.user@example.com"));
+    }
+
     @Test
     void regularUserCannotCreateClients() throws Exception {
         mockMvc.perform(post("/api/v1/clients")
