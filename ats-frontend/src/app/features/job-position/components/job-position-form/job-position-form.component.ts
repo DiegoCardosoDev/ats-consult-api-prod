@@ -41,6 +41,7 @@ export class JobPositionFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    this.watchStatusChanges();
     this.loadTechnologies();
     this.loadClients();
 
@@ -59,6 +60,7 @@ export class JobPositionFormComponent implements OnInit {
       title: ['', [Validators.required, Validators.minLength(3)]],
       description: [''],
       status: ['OPEN', [Validators.required]],
+      statusReason: [''],
       workModel: ['HYBRID', [Validators.required]],
       contractType: ['CLT', [Validators.required]],
       educationLevel: [null],
@@ -71,6 +73,37 @@ export class JobPositionFormComponent implements OnInit {
         country: ['']
       })
     });
+  }
+
+  private watchStatusChanges(): void {
+    const statusControl = this.jobForm.get('status');
+    statusControl?.valueChanges.subscribe((status: string | null) => {
+      this.updateStatusReasonValidators(status);
+    });
+    this.updateStatusReasonValidators(statusControl?.value ?? null);
+  }
+
+  private updateStatusReasonValidators(status: string | null): void {
+    const reasonControl = this.jobForm.get('statusReason');
+    if (!reasonControl) {
+      return;
+    }
+    if (status === 'CLOSED' || status === 'FROZEN') {
+      reasonControl.setValidators([
+        Validators.required,
+        Validators.minLength(3),
+        Validators.maxLength(500)
+      ]);
+    } else {
+      reasonControl.clearValidators();
+      reasonControl.setValue('', { emitEvent: false });
+    }
+    reasonControl.updateValueAndValidity({ emitEvent: false });
+  }
+
+  get requiresStatusReason(): boolean {
+    const status = this.jobForm?.get('status')?.value;
+    return status === 'CLOSED' || status === 'FROZEN';
   }
 
   private loadClients(): void {

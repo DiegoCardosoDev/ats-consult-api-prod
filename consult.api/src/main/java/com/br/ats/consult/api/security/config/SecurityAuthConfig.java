@@ -122,13 +122,17 @@ public class SecurityAuthConfig {
                                 "/*.js", "/*.css", "/*.map", "/*.ico", "/*.png", "/*.svg", "/*.webmanifest").permitAll()
                         .requestMatchers(HttpMethod.GET, "/login", "/register", "/home", "/jobs", "/jobs/**",
                                 "/candidates", "/clients", "/processes", "/processes/**",
+                                "/reports", "/reports/**",
                                 "/users", "/users/**", "/privacidade").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/job-positions/*/applications").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/job-positions/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/job-positions/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/job-positions/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/job-positions/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/job-positions/**").authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reports/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/technologies/**").hasAnyRole("ADMIN", "TECH_RECRUITER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/technologies/**").hasAnyRole("ADMIN", "TECH_RECRUITER")

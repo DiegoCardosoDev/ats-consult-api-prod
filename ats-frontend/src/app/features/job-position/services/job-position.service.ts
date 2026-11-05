@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { JobPosition } from '../models/job-position.model';
+import { JobStatus } from '../models/job-position-enums.model';
 import { PageResponse } from '../../../core/models/page-response.model';
 import { environment } from '../../../../environments/environment';
 
@@ -34,6 +35,10 @@ export class JobPositionService {
 
   update(id: number, job: unknown): Observable<JobPosition> {
     return this.http.put<JobPosition>(`${this.apiUrl}/${id}`, job);
+  }
+
+  changeStatus(id: number, status: JobStatus, reason?: string): Observable<JobPosition> {
+    return this.http.patch<JobPosition>(`${this.apiUrl}/${id}/status`, { status, reason });
   }
 
   delete(id: number): Observable<void> {

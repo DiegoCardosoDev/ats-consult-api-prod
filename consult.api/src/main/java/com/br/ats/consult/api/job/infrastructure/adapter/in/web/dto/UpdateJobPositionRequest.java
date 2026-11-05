@@ -27,6 +27,8 @@ public record UpdateJobPositionRequest(
         String description,
         @NotNull(message = "O estado da vaga é obrigatório")
         JobStatusEnum status,
+        @Size(max = 500, message = "O motivo da vaga não pode exceder 500 caracteres")
+        String statusReason,
         @NotNull(message = "O modelo de trabalho é obrigatório")
         WorkModelEnum workModel,
         @PositiveOrZero(message = "O salário mínimo não pode ser negativo")

@@ -19,6 +19,7 @@ export interface JobPosition {
   title: string;
   description: string;
   status: JobStatus;
+  statusReason?: string;
   workModel: WorkModel;
   contractType: string;
   educationLevel?: string;

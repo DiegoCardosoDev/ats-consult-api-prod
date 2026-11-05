@@ -8,6 +8,7 @@ export type CandidateApplicationStatus =
   | 'ENTREVISTA_TECH_RECRUITER'
   | 'APROVADO_ENTREVISTA_CLIENTE'
   | 'APROVADO_CLIENTE'
+  | 'CONTRATADO'
   | 'REPROVADO'
   | 'DECLINOU'
   | 'STAND_BY';

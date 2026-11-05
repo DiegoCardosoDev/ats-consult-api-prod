@@ -18,7 +18,7 @@ Principais capacidades:
 - Formulário de candidatura por vaga (perguntas configuráveis).
 - Candidatura por vaga ou diretamente em um processo seletivo.
 - Upload e download de currículo em PDF.
-- Quadro Kanban por processo seletivo com 8 fases.
+- Quadro Kanban por processo seletivo com 9 fases, incluindo `CONTRATADO`.
 - Comentários por candidatura, com autor e data/hora.
 - Autenticação por sessão opaca no servidor com cookie HttpOnly, autorização por papéis e proteção CSRF.
 
@@ -69,7 +69,7 @@ ats-api-manager/
 │   │   ├── application.properties
 │   │   ├── application-dev.properties
 │   │   ├── application-prod.properties
-│   │   └── db/migration/             # Flyway V1..V16
+│   │   └── db/migration/             # Flyway V1..V17
 │   └── src/test/java/                # Testes de contexto, segurança e integração
 ├── ats-frontend/
 │   └── src/
@@ -203,6 +203,7 @@ erDiagram
 | `V14` | Guarda a chave da pergunta nas respostas para tradução no frontend |
 | `V15` | Consentimento LGPD nas candidaturas (aceite, data/hora, versão e IP) |
 | `V16` | Nome completo (`full_name`) dos utilizadores |
+| `V17` | Motivo de fechamento/congelamento da vaga e status Kanban `CONTRATADO` |
 
 > A `V9` faz backfill de vagas antigas: cria `Cliente Padrão` se não existir cliente e associa as vagas sem `client_id` ao primeiro cliente disponível antes de aplicar `NOT NULL`.
 
@@ -213,6 +214,10 @@ erDiagram
 - Toda vaga deve ter um cliente válido (`clientId` obrigatório e positivo).
 - O cliente é resolvido no caso de uso de criação/atualização e persistido como `@ManyToOne`.
 - A resposta da vaga inclui um resumo do cliente (`id`, `name`, `code`).
+- Estados da vaga: `DRAFT`, `OPEN`, `PAUSED`, `FROZEN` e `CLOSED`.
+- Fechar (`CLOSED`) ou congelar (`FROZEN`) exige um motivo curto (`statusReason`, até 500 caracteres). O motivo é devolvido na resposta e exibido no frontend.
+- Apenas vagas `CLOSED` ou `FROZEN` podem ser reabertas; ao reabrir (`OPEN`), o motivo é limpo.
+- A alteração de estado dedicada usa `PATCH /api/v1/job-positions/{id}/status` e exige `ADMIN` ou `TECH_RECRUITER`.
 
 ### Perfil do candidato
 
@@ -249,6 +254,8 @@ Regras de criação de conta:
 - O cliente informado no processo deve ser exatamente o cliente da vaga; caso contrário, a operação é rejeitada.
 - Se `status` não for informado, assume `OPEN`. Se `openedAt` não for informado, assume a data atual.
 - Só é possível candidatar-se a um processo com status `OPEN`.
+- O relatório de processos agrega, por processo, o total de candidaturas, currículos em triagem, reprovados, aprovados pelo cliente e contratados.
+- O relatório aceita filtros por cliente, vaga e estado do processo, além de paginação.
 
 ### Aderência do candidato à vaga
 
@@ -424,7 +431,15 @@ Resposta: `201 Created` com o utilizador criado. E-mail duplicado retorna `409 C
 | GET | `/api/v1/job-positions` | Autenticado | `technologyId`, `page`, `size`, `sort` |
 | GET | `/api/v1/job-positions/{id}` | Autenticado | Inclui `client` |
 | PUT | `/api/v1/job-positions/{id}` | `ADMIN`, `TECH_RECRUITER` | Exige `clientId` e `status` |
+| PATCH | `/api/v1/job-positions/{id}/status` | `ADMIN`, `TECH_RECRUITER` | Fecha, congela ou reabre; exige `reason` ao fechar/congelar |
 | DELETE | `/api/v1/job-positions/{id}` | `ADMIN`, `TECH_RECRUITER` | 204 |
+
+### Relatórios
+
+| Método | Caminho | Acesso | Observação |
+| --- | --- | --- | --- |
+| GET | `/api/v1/reports/selection-processes` | `ADMIN`, `TECH_RECRUITER` | Resumo agregado + processos paginados; filtros `clientId`, `jobPositionId`, `status` |
+| GET | `/api/v1/reports/selection-processes/{processId}` | `ADMIN`, `TECH_RECRUITER` | Dashboard do processo: contagens por fase, aderência média, taxa de conversão, evolução diária e top candidatos |
 
 ### Candidatos
 
@@ -639,7 +654,7 @@ Componentes principais:
 
 - `process-list`: lista e criação de processos; ao escolher a vaga, o cliente é preenchido automaticamente.
 - `process-detail`: carrega o processo, formulário da vaga e candidaturas; integra Kanban e modais.
-- `kanban-board`: quadro com 8 colunas, `cdkDrag`, `cdkDropListGroup`, preview/placeholder, badge de aderência e emissão de `statusChanged` e `cardSelected`.
+- `kanban-board`: quadro com 9 colunas (incluindo `CONTRATADO`), `cdkDrag`, `cdkDropListGroup`, preview/placeholder, badge de aderência e emissão de `statusChanged` e `cardSelected`.
 - `candidate-application-modal`: candidatura em vaga ou processo num único formulário, com identificação, dados complementares, avaliação e tecnologias; upload de PDF e aceite obrigatório da Política de Privacidade.
 - `application-detail-modal`: drawer com dados do candidato, aderência à vaga, currículo, consentimento LGPD, respostas, histórico de comentários e novo comentário.
 - `privacy-policy`: página pública (`/privacidade`) com a versão 1.0 da Política de Privacidade.
@@ -648,6 +663,16 @@ Componentes principais:
 
 - O formulário de vaga exige o cliente, carregado via `ClientService`.
 - A lista e o detalhe exibem o cliente associado.
+- Os indicadores de estado usam verde para `OPEN`, vermelho para `CLOSED`, amarelo/laranja para `FROZEN` e cinza para `DRAFT`.
+- O detalhe da vaga permite fechar, congelar e reabrir; fechar/congelar abre um modal que exige o motivo.
+
+### Módulo de relatórios
+
+- A página `/reports` apresenta o resumo de processos (incluindo declinados e stand by) e uma tabela por processo com candidaturas, triagem, reprovados, aprovados pelo cliente, contratados, declinados e stand by.
+- Cada linha permite expandir o **detalhamento por fase**, exibindo a contagem das 9 fases do Kanban para aquele processo, além dos atalhos **Dashboard** e **Kanban**.
+- A página permite filtrar por cliente, vaga e estado do processo e navegar entre páginas de resultados.
+- A rota `/reports/:id` abre um **dashboard gráfico do processo** com hero colorido, anel de aderência média, KPIs, gráfico de rosca (donut) por fase, evolução diária das candidaturas (SVG), barras do pipeline das 9 fases e ranking de candidatos por aderência.
+- Os gráficos são desenhados com CSS (`conic-gradient`) e SVG nativo, sem dependências adicionais de bibliotecas de charts.
 
 ### Estilo
 

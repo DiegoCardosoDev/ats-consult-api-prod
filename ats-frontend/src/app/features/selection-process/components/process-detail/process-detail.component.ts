@@ -154,6 +154,7 @@ export class ProcessDetailComponent implements OnInit {
       ENTREVISTA_TECH_RECRUITER: 'Entrevista Tech Recruiter',
       APROVADO_ENTREVISTA_CLIENTE: 'Aprovado para Entrevista Cliente',
       APROVADO_CLIENTE: 'Aprovado pelo Cliente',
+      CONTRATADO: 'Contratado',
       REPROVADO: 'Reprovado',
       DECLINOU: 'Declinou',
       STAND_BY: 'Stand By'

@@ -13,6 +13,8 @@ import { ProcessDetailComponent } from './features/selection-process/components/
 import { PrivacyPolicyComponent } from './features/privacy/privacy-policy.component';
 import { RegisterComponent } from './pages/register/register.component';
 import { UserManagementComponent } from './features/user/components/user-management/user-management.component';
+import { ProcessReportComponent } from './features/report/components/process-report/process-report.component';
+import { ProcessReportDashboardComponent } from './features/report/components/process-report-dashboard/process-report-dashboard.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -56,6 +58,18 @@ export const routes: Routes = [
   {
     path: 'processes/:id',
     component: ProcessDetailComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN', 'TECH_RECRUITER'] }
+  },
+  {
+    path: 'reports',
+    component: ProcessReportComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ADMIN', 'TECH_RECRUITER'] }
+  },
+  {
+    path: 'reports/:id',
+    component: ProcessReportDashboardComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ADMIN', 'TECH_RECRUITER'] }
   },

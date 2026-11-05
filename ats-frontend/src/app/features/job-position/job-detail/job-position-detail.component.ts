@@ -37,6 +37,13 @@ export class JobPositionDetailComponent implements OnInit {
   // 🟢 Variável de controle do modal personalizado
   isDeleteModalOpen = false;
 
+  statusModalOpen = false;
+  statusModalTarget: 'CLOSED' | 'FROZEN' | null = null;
+  statusReasonInput = '';
+  statusChangeError = '';
+  statusSuccessMessage = '';
+  isChangingStatus = false;
+
   showApplicationModal = false;
   applicationSuccessMessage = '';
   appliedProcessId?: number;
@@ -92,9 +99,119 @@ export class JobPositionDetailComponent implements OnInit {
     const labels: { [key: string]: string } = {
       'OPEN': 'Aberta',
       'CLOSED': 'Fechada',
-      'PAUSED': 'Pausada'
+      'PAUSED': 'Pausada',
+      'FROZEN': 'Congelada',
+      'DRAFT': 'Rascunho'
     };
     return status ? (labels[status] || status) : '';
+  }
+
+  statusBadgeClass(status?: string): string {
+    switch (status) {
+      case 'OPEN': return 'bg-success text-white';
+      case 'CLOSED': return 'bg-danger text-white';
+      case 'FROZEN': return 'bg-warning text-dark';
+      case 'PAUSED': return 'bg-warning-subtle text-warning-emphasis';
+      case 'DRAFT': return 'bg-secondary text-white';
+      default: return 'bg-secondary text-white';
+    }
+  }
+
+  statusIcon(status?: string): string {
+    switch (status) {
+      case 'OPEN': return 'bi-check-circle-fill';
+      case 'CLOSED': return 'bi-x-circle-fill';
+      case 'FROZEN': return 'bi-snow';
+      case 'PAUSED': return 'bi-pause-circle-fill';
+      case 'DRAFT': return 'bi-pencil-fill';
+      default: return 'bi-circle-fill';
+    }
+  }
+
+  get canCloseJob(): boolean {
+    return !!this.job && this.job.status !== 'CLOSED';
+  }
+
+  get canFreezeJob(): boolean {
+    return !!this.job && this.job.status !== 'FROZEN' && this.job.status !== 'CLOSED';
+  }
+
+  get canReopenJob(): boolean {
+    return this.job?.status === 'CLOSED' || this.job?.status === 'FROZEN';
+  }
+
+  openStatusModal(status: 'CLOSED' | 'FROZEN'): void {
+    this.statusModalTarget = status;
+    this.statusReasonInput = '';
+    this.statusChangeError = '';
+    this.statusModalOpen = true;
+  }
+
+  closeStatusModal(): void {
+    if (this.isChangingStatus) {
+      return;
+    }
+    this.statusModalOpen = false;
+    this.statusModalTarget = null;
+    this.statusReasonInput = '';
+    this.statusChangeError = '';
+  }
+
+  confirmStatusChange(): void {
+    if (!this.job?.id || !this.statusModalTarget) {
+      return;
+    }
+    const reason = this.statusReasonInput.trim();
+    if (reason.length < 3) {
+      this.statusChangeError = 'Descreva o motivo com pelo menos 3 caracteres.';
+      return;
+    }
+    if (reason.length > 500) {
+      this.statusChangeError = 'O motivo não pode exceder 500 caracteres.';
+      return;
+    }
+
+    this.isChangingStatus = true;
+    this.statusChangeError = '';
+    this.jobPositionService.changeStatus(this.job.id, this.statusModalTarget, reason).subscribe({
+      next: (updated) => {
+        this.isChangingStatus = false;
+        this.statusModalOpen = false;
+        this.statusModalTarget = null;
+        this.statusReasonInput = '';
+        this.job = updated;
+        this.statusSuccessMessage = updated.status === 'CLOSED'
+          ? 'Vaga fechada com sucesso.'
+          : 'Vaga congelada com sucesso.';
+      },
+      error: (err: unknown) => {
+        this.isChangingStatus = false;
+        this.statusChangeError = extractApiErrorMessage(err, 'Não foi possível atualizar o estado da vaga.');
+      }
+    });
+  }
+
+  reopenJob(): void {
+    if (!this.job?.id) {
+      return;
+    }
+    if (!confirm('Deseja reabrir esta vaga? Ela voltará a receber candidaturas.')) {
+      return;
+    }
+
+    this.isChangingStatus = true;
+    this.statusChangeError = '';
+    this.jobPositionService.changeStatus(this.job.id, 'OPEN').subscribe({
+      next: (updated) => {
+        this.isChangingStatus = false;
+        this.job = updated;
+        this.statusSuccessMessage = 'Vaga reaberta com sucesso.';
+      },
+      error: (err: unknown) => {
+        this.isChangingStatus = false;
+        this.statusChangeError = extractApiErrorMessage(err, 'Não foi possível reabrir a vaga.');
+      }
+    });
   }
 
   getEducationLevelLabel(level?: string): string {

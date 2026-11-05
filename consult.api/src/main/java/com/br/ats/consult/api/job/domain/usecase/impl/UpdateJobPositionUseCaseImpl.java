@@ -52,6 +52,13 @@ public class UpdateJobPositionUseCaseImpl implements UpdateJobPositionUseCase {
             jobPosition.setTechnologies(existingJob.getTechnologies());
         }
         jobPosition.setId(id);
+        if (jobPosition.requiresStatusReason()) {
+            if (jobPosition.getStatusReason() != null) {
+                jobPosition.setStatusReason(jobPosition.getStatusReason().trim());
+            }
+        } else {
+            jobPosition.setStatusReason(null);
+        }
         jobPosition.validate();
 
         return gateway.update(id, jobPosition);

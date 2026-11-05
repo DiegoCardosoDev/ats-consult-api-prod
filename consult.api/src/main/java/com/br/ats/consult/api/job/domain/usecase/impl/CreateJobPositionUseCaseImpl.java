@@ -43,6 +43,13 @@ public class CreateJobPositionUseCaseImpl implements CreateJobPositionUseCase {
         if (jobPosition.getStatus() == null) {
             jobPosition.setStatus(JobStatusEnum.DRAFT);
         }
+        if (jobPosition.requiresStatusReason()) {
+            if (jobPosition.getStatusReason() != null) {
+                jobPosition.setStatusReason(jobPosition.getStatusReason().trim());
+            }
+        } else {
+            jobPosition.setStatusReason(null);
+        }
         jobPosition.validate();
 
         // Se a vaga veio com tecnologias (apenas com IDs ou referências),

@@ -15,6 +15,7 @@
           <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
           <a routerLink="/clients" class="nav-link-custom">Clientes</a>
           <a routerLink="/processes" class="nav-link-custom">Processos</a>
+          <a routerLink="/reports" class="nav-link-custom">Relatórios</a>
         }
         <button type="button" (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
       </div>
@@ -58,6 +59,15 @@
         </div>
       }
 
+      @if (statusSuccessMessage) {
+        <div class="alert alert-success border-0 shadow-sm mb-4">
+          <i class="bi bi-check-circle-fill me-2"></i>{{ statusSuccessMessage }}
+        </div>
+      }
+      @if (statusChangeError && !statusModalOpen) {
+        <div class="alert alert-danger border-0 shadow-sm mb-4">{{ statusChangeError }}</div>
+      }
+
       <!-- Card Principal de Detalhes -->
       @if (!isLoading && job) {
         <div class="card border-0 shadow-lg p-4 p-md-5 rounded-4 bg-white text-dark">
@@ -95,7 +105,22 @@
                   {{ authService.isStaff() ? 'Receber Candidatura' : 'Candidatar-me' }}
                 </button>
                 @if (authService.isStaff()) {
-                  <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="onEdit(job.id!)">
+                  @if (canFreezeJob) {
+                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="openStatusModal('FROZEN')">
+                      <i class="bi bi-snow"></i> Congelar
+                    </button>
+                  }
+                  @if (canCloseJob) {
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="openStatusModal('CLOSED')">
+                      <i class="bi bi-x-circle-fill"></i> Fechar vaga
+                    </button>
+                  }
+                  @if (canReopenJob) {
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="reopenJob()" [disabled]="isChangingStatus">
+                      <i class="bi bi-arrow-counterclockwise"></i> Reabrir vaga
+                    </button>
+                  }
+                  <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="onEdit(job.id!)">
                     <i class="bi bi-pencil-fill"></i> Editar
                   </button>
                   <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-semibold d-flex align-items-center gap-1" (click)="onDelete(job.id!)">
@@ -111,8 +136,9 @@
             <h6 class="fw-semibold text-muted text-uppercase small mb-3">Informações Gerais:</h6>
             <div class="d-flex flex-wrap gap-2">
               @if (job.status) {
-                <span class="badge bg-success text-white rounded-pill px-3 py-2 d-flex align-items-center gap-1">
-                  <i class="bi bi-check-circle-fill"></i> Status: {{ getStatusLabel(job.status) }}
+                <span class="badge rounded-pill px-3 py-2 d-flex align-items-center gap-1"
+                      [ngClass]="statusBadgeClass(job.status)">
+                  <i class="bi" [ngClass]="statusIcon(job.status)"></i> Status: {{ getStatusLabel(job.status) }}
                 </span>
               }
 
@@ -138,6 +164,16 @@
                 </span>
               }
             </div>
+
+            @if (job.statusReason) {
+              <div class="alert mt-3 mb-0 py-2 px-3"
+                   [class.alert-danger]="job.status === 'CLOSED'"
+                   [class.alert-warning]="job.status === 'FROZEN'">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                <strong>Motivo do {{ job.status === 'CLOSED' ? 'fechamento' : 'congelamento' }}:</strong>
+                {{ job.statusReason }}
+              </div>
+            }
           </div>
 
           <!-- Descrição da Vaga -->
@@ -266,6 +302,57 @@
       (closed)="closeFormEditor()"
       (saved)="onFormSaved($event)">
     </app-application-form-editor>
+  }
+
+  <!-- Modal de Fechamento / Congelamento da Vaga -->
+  @if (statusModalOpen) {
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background: rgba(0,0,0,0.6);">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content bg-white text-dark rounded-4 shadow-lg border-0 p-3">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold d-flex align-items-center gap-2"
+                [class.text-danger]="statusModalTarget === 'CLOSED'"
+                [class.text-warning]="statusModalTarget === 'FROZEN'">
+              <i class="bi" [class.bi-x-circle-fill]="statusModalTarget === 'CLOSED'"
+                 [class.bi-snow]="statusModalTarget === 'FROZEN'"></i>
+              {{ statusModalTarget === 'CLOSED' ? 'Fechar vaga' : 'Congelar vaga' }}
+            </h5>
+            <button type="button" class="btn-close" aria-label="Fechar" (click)="closeStatusModal()"></button>
+          </div>
+          <div class="modal-body py-3">
+            <p class="text-secondary small mb-3">
+              Informe o motivo para {{ statusModalTarget === 'CLOSED' ? 'fechar' : 'congelar' }}
+              a vaga <strong>{{ job?.title }}</strong>. Este motivo ficará visível na vaga.
+            </p>
+            <label class="form-label fw-medium">Motivo <span class="text-danger">*</span></label>
+            <textarea class="form-control" rows="3" maxlength="500"
+                      placeholder="Ex: Vaga preenchida pelo cliente / Processo suspenso por reestruturação."
+                      [value]="statusReasonInput"
+                      (input)="statusReasonInput = $any($event.target).value"></textarea>
+            <div class="d-flex justify-content-between mt-1">
+              <span class="text-danger small">{{ statusChangeError }}</span>
+              <span class="text-muted small">{{ statusReasonInput.length }}/500</span>
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0 d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4"
+                    (click)="closeStatusModal()" [disabled]="isChangingStatus">
+              Cancelar
+            </button>
+            <button type="button" class="btn rounded-pill px-4"
+                    [class.btn-danger]="statusModalTarget === 'CLOSED'"
+                    [class.btn-warning]="statusModalTarget === 'FROZEN'"
+                    (click)="confirmStatusChange()" [disabled]="isChangingStatus">
+              @if (isChangingStatus) {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+              }
+              {{ statusModalTarget === 'CLOSED' ? 'Confirmar fechamento' : 'Confirmar congelamento' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
   }
 
   <!-- Modal de Confirmação de Exclusão Personalizado -->

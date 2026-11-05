@@ -4,5 +4,6 @@ public enum JobStatusEnum {
     DRAFT,
     OPEN,
     PAUSED,
+    FROZEN,
     CLOSED
 }

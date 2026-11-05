@@ -27,6 +27,7 @@ public class JobPosition {
     private BigDecimal maxSalary;      // Salário Máximo / Até
     private Location location;
     private List<Technology> technologies; // IDs das tecnologias exigidas para a vaga
+    private String statusReason; // Motivo do fechamento ou congelamento da vaga
 
     public void validate() {
         if (client == null || client.getId() == null) {
@@ -53,5 +54,15 @@ public class JobPosition {
         if (minSalary != null && maxSalary != null && minSalary.compareTo(maxSalary) > 0) {
             throw new IllegalArgumentException("O salário mínimo não pode ser superior ao salário máximo.");
         }
+        if (requiresStatusReason() && (statusReason == null || statusReason.isBlank())) {
+            throw new IllegalArgumentException("O motivo do fechamento ou congelamento da vaga é obrigatório.");
+        }
+        if (statusReason != null && statusReason.trim().length() > 500) {
+            throw new IllegalArgumentException("O motivo da vaga não pode exceder 500 caracteres.");
+        }
+    }
+
+    public boolean requiresStatusReason() {
+        return status == JobStatusEnum.CLOSED || status == JobStatusEnum.FROZEN;
     }
 }

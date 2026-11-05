@@ -1,0 +1,276 @@
+<div class="page-layout text-white min-vh-100 d-flex flex-column">
+  <nav class="navbar navbar-expand-lg navbar-dark px-4 py-3 border-bottom border-white border-opacity-10 bg-dark-header">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/home">
+        <span class="logo-badge bg-primary px-2 py-1 rounded fs-6">TN</span>
+        <span class="fs-5 tracking-wide">TN CONSULTORIA</span>
+      </a>
+      <div class="d-flex align-items-center gap-2 ms-auto flex-wrap justify-content-end">
+        <a routerLink="/home" class="nav-link-custom">Home</a>
+        <a routerLink="/jobs" class="nav-link-custom">Vagas</a>
+        <a routerLink="/candidates" class="nav-link-custom">Candidatos</a>
+        <a routerLink="/clients" class="nav-link-custom">Clientes</a>
+        <a routerLink="/processes" class="nav-link-custom">Processos</a>
+        <a routerLink="/reports" class="nav-link-custom active">Relatórios</a>
+        <button type="button" (click)="logout()" class="btn btn-outline-light rounded-pill px-4 ms-2">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container-fluid px-3 px-lg-4 py-4 flex-grow-1">
+    <div class="dashboard-shell mx-auto">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <a routerLink="/reports" class="btn btn-outline-light rounded-pill px-4">
+          <i class="bi bi-arrow-left me-1"></i> Voltar aos relatórios
+        </a>
+        @if (dashboard) {
+          <div class="d-flex gap-2">
+            <a [routerLink]="['/processes', dashboard.processId]" class="btn btn-light rounded-pill px-4">
+              <i class="bi bi-kanban me-1"></i> Abrir Kanban
+            </a>
+          </div>
+        }
+      </div>
+
+      @if (errorMessage) {
+        <div class="alert alert-danger border-0 shadow-sm">{{ errorMessage }}</div>
+      }
+
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-light" role="status"></div>
+          <p class="mt-3 text-light opacity-75">A preparar o dashboard...</p>
+        </div>
+      }
+
+      @if (!isLoading && dashboard) {
+        <section class="dashboard-hero mb-4">
+          <div class="dashboard-hero__glow dashboard-hero__glow--one"></div>
+          <div class="dashboard-hero__glow dashboard-hero__glow--two"></div>
+          <div class="dashboard-hero__content">
+            <span class="dashboard-hero__eyebrow">
+              <i class="bi bi-graph-up-arrow"></i> Dashboard do processo #{{ dashboard.processId }}
+            </span>
+            <h1 class="dashboard-hero__title">{{ dashboard.jobPosition.title }}</h1>
+            <p class="dashboard-hero__client">
+              <i class="bi bi-building me-1"></i>{{ dashboard.client.name }}
+              <span class="opacity-50">·</span>
+              <span class="dashboard-hero__code">{{ dashboard.client.code }}</span>
+            </p>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+              <span class="status-pill" [ngClass]="statusClass(dashboard.status)">
+                <i class="bi bi-circle-fill"></i>{{ statusLabel(dashboard.status) }}
+              </span>
+              <span class="hero-meta">
+                <i class="bi bi-calendar-event"></i>Aberto em {{ dashboard.openedAt | date:'dd/MM/yyyy' }}
+              </span>
+              <span class="hero-meta">
+                <i class="bi bi-hourglass-split"></i>{{ dashboard.daysOpen }} dias em andamento
+              </span>
+            </div>
+          </div>
+          <div class="dashboard-hero__ring">
+            <div class="adherence-ring" [style.background]="adherenceGradient">
+              <div class="adherence-ring__inner">
+                <span class="adherence-ring__value">{{ dashboard.averageAdherence }}%</span>
+                <span class="adherence-ring__label">aderência média</span>
+              </div>
+            </div>
+            <span class="dashboard-hero__ring-caption">
+              <i class="bi bi-stars"></i>{{ dashboard.highAdherenceCount }} candidatos com 75%+
+            </span>
+          </div>
+        </section>
+
+        <section class="kpi-grid mb-4">
+          <article class="kpi-card kpi-card--blue">
+            <div class="kpi-card__icon"><i class="bi bi-people-fill"></i></div>
+            <span class="kpi-card__label">Candidaturas</span>
+            <span class="kpi-card__value">{{ dashboard.totalApplications }}</span>
+            <span class="kpi-card__hint">total recebido</span>
+          </article>
+          <article class="kpi-card kpi-card--indigo">
+            <div class="kpi-card__icon"><i class="bi bi-arrow-repeat"></i></div>
+            <span class="kpi-card__label">Em andamento</span>
+            <span class="kpi-card__value">{{ dashboard.activeApplications }}</span>
+            <span class="kpi-card__hint">a avançar no funil</span>
+          </article>
+          <article class="kpi-card kpi-card--teal">
+            <div class="kpi-card__icon"><i class="bi bi-check2-circle"></i></div>
+            <span class="kpi-card__label">Aprovados cliente</span>
+            <span class="kpi-card__value">{{ dashboard.approvedByClient }}</span>
+            <span class="kpi-card__hint">validação final</span>
+          </article>
+          <article class="kpi-card kpi-card--green">
+            <div class="kpi-card__icon"><i class="bi bi-patch-check-fill"></i></div>
+            <span class="kpi-card__label">Contratados</span>
+            <span class="kpi-card__value">{{ dashboard.hired }}</span>
+            <span class="kpi-card__hint">contratações fechadas</span>
+          </article>
+          <article class="kpi-card kpi-card--amber">
+            <div class="kpi-card__icon"><i class="bi bi-speedometer2"></i></div>
+            <span class="kpi-card__label">Conversão</span>
+            <span class="kpi-card__value">{{ dashboard.conversionRate.toFixed(1) }}%</span>
+            <span class="kpi-card__hint">contratados / candidaturas</span>
+          </article>
+          <article class="kpi-card kpi-card--rose">
+            <div class="kpi-card__icon"><i class="bi bi-person-x-fill"></i></div>
+            <span class="kpi-card__label">Fora do funil</span>
+            <span class="kpi-card__value">{{ dashboard.rejected + dashboard.declined }}</span>
+            <span class="kpi-card__hint">{{ dashboard.rejected }} reprovados · {{ dashboard.declined }} declinaram</span>
+          </article>
+        </section>
+
+        <div class="row g-4 mb-4">
+          <div class="col-xl-5">
+            <section class="chart-card h-100">
+              <div class="chart-card__header">
+                <div>
+                  <span class="chart-card__eyebrow">Visão geral</span>
+                  <h2 class="chart-card__title">Distribuição por fase</h2>
+                </div>
+                <span class="chart-chip">{{ dashboard.totalApplications }} candidaturas</span>
+              </div>
+              <div class="donut-wrap">
+                <div class="donut" [style.background]="donutGradient">
+                  <div class="donut__inner">
+                    <span class="donut__value">{{ dashboard.totalApplications }}</span>
+                    <span class="donut__label">candidaturas</span>
+                  </div>
+                </div>
+                <div class="donut-legend">
+                  @for (phase of phaseStats; track phase.status) {
+                    @if (phase.total > 0) {
+                      <div class="legend-item">
+                        <span class="legend-dot" [style.background]="phase.color"></span>
+                        <span class="legend-name">{{ phase.label }}</span>
+                        <span class="legend-value">{{ phase.total }}</span>
+                        <span class="legend-percent">{{ phase.percentage.toFixed(0) }}%</span>
+                      </div>
+                    }
+                  }
+                  @if (dashboard.totalApplications === 0) {
+                    <p class="empty-hint"><i class="bi bi-inbox"></i> Ainda não existem candidaturas neste processo.</p>
+                  }
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="col-xl-7">
+            <section class="chart-card h-100">
+              <div class="chart-card__header">
+                <div>
+                  <span class="chart-card__eyebrow">Tendência</span>
+                  <h2 class="chart-card__title">Evolução das candidaturas</h2>
+                </div>
+                <span class="chart-chip chart-chip--violet">
+                  <i class="bi bi-activity"></i> pico de {{ timelinePeak }}/dia
+                </span>
+              </div>
+              @if (dashboard.timeline.length > 0) {
+                <div class="timeline-chart">
+                  <svg viewBox="0 0 600 180" preserveAspectRatio="none" role="img"
+                       aria-label="Evolução diária das candidaturas">
+                    <defs>
+                      <linearGradient id="timelineFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#818cf8" stop-opacity="0.55" />
+                        <stop offset="100%" stop-color="#818cf8" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <line x1="0" y1="40" x2="600" y2="40" class="timeline-grid" />
+                    <line x1="0" y1="80" x2="600" y2="80" class="timeline-grid" />
+                    <line x1="0" y1="120" x2="600" y2="120" class="timeline-grid" />
+                    <line x1="0" y1="160" x2="600" y2="160" class="timeline-grid" />
+                    <path [attr.d]="timelineAreaPath" fill="url(#timelineFill)" />
+                    <polyline [attr.points]="timelinePolyline" fill="none" stroke="#6366f1"
+                              stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
+                  </svg>
+                  <div class="timeline-labels">
+                    <span>{{ timelineStartLabel }}</span>
+                    <span>{{ timelineEndLabel }}</span>
+                  </div>
+                </div>
+              } @else {
+                <p class="empty-hint"><i class="bi bi-graph-down"></i> Sem dados de candidaturas para desenhar a evolução.</p>
+              }
+            </section>
+          </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <div class="col-xl-7">
+            <section class="chart-card h-100">
+              <div class="chart-card__header">
+                <div>
+                  <span class="chart-card__eyebrow">Pipeline</span>
+                  <h2 class="chart-card__title">Fases do processo</h2>
+                </div>
+                <span class="chart-chip">9 fases do Kanban</span>
+              </div>
+              <div class="phase-list">
+                @for (phase of phaseStats; track phase.status) {
+                  <div class="phase-row">
+                    <span class="phase-icon" [style.background]="phase.softColor" [style.color]="phase.color">
+                      <i class="bi" [ngClass]="phase.icon"></i>
+                    </span>
+                    <div class="phase-body">
+                      <div class="phase-head">
+                        <span class="phase-name">{{ phase.label }}</span>
+                        <span class="phase-count">{{ phase.total }}</span>
+                      </div>
+                      <div class="phase-track">
+                        <div class="phase-fill"
+                             [style.width.%]="(phase.total / maxPhaseTotal) * 100"
+                             [style.background]="phase.color"></div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </section>
+          </div>
+
+          <div class="col-xl-5">
+            <section class="chart-card h-100">
+              <div class="chart-card__header">
+                <div>
+                  <span class="chart-card__eyebrow">Destaques</span>
+                  <h2 class="chart-card__title">Top aderência</h2>
+                </div>
+                <span class="chart-chip chart-chip--green">{{ dashboard.highAdherenceCount }} com 75%+</span>
+              </div>
+              @if (dashboard.topCandidates.length > 0) {
+                <div class="candidate-list">
+                  @for (candidate of dashboard.topCandidates; track candidate.applicationId; let index = $index) {
+                    <div class="candidate-row">
+                      <span class="candidate-rank">{{ index + 1 }}</span>
+                      <span class="candidate-avatar" [style.background]="phaseFor(candidate.status).color">
+                        {{ initials(candidate.candidateName) }}
+                      </span>
+                      <div class="candidate-info">
+                        <span class="candidate-name">{{ candidate.candidateName || 'Candidato' }}</span>
+                        <span class="candidate-phase" [style.color]="phaseFor(candidate.status).color">
+                          <i class="bi" [ngClass]="phaseFor(candidate.status).icon"></i>
+                          {{ phaseFor(candidate.status).label }}
+                        </span>
+                      </div>
+                      <div class="candidate-score">
+                        <span class="candidate-score__value">{{ candidate.adherence }}%</span>
+                        <div class="candidate-track">
+                          <div [style.width.%]="candidate.adherence" [style.background]="phaseFor(candidate.status).color"></div>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="empty-hint"><i class="bi bi-person-plus"></i> Nenhuma candidatura para calcular aderência.</p>
+              }
+            </section>
+          </div>
+        </div>
+      }
+    </div>
+  </main>
+</div>

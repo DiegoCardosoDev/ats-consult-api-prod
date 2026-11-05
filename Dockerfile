@@ -18,7 +18,8 @@ RUN mvn -B -q package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 ENV SPRING_PROFILES_ACTIVE=prod
-RUN addgroup -S app && adduser -S app -G app
+RUN addgroup -S app && adduser -S app -G app \
+    && mkdir -p /app/uploads && chown -R app:app /app/uploads
 COPY --from=backend /build/target/*.war /app/app.war
 USER app
 EXPOSE 8080

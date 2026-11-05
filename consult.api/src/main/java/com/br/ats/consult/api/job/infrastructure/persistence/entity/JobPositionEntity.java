@@ -39,6 +39,9 @@ public class JobPositionEntity {
     @Column(nullable = false)
     private JobStatusEnum status;
 
+    @Column(name = "status_reason", length = 500)
+    private String statusReason;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "work_model", nullable = false)
     private WorkModelEnum workModel;

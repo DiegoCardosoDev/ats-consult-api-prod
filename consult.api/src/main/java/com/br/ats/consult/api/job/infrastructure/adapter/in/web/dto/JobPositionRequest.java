@@ -26,6 +26,8 @@ public record JobPositionRequest(
         @Size(max = 10000, message = "A descrição não pode exceder 10000 caracteres")
         String description,
         JobStatusEnum status,
+        @Size(max = 500, message = "O motivo da vaga não pode exceder 500 caracteres")
+        String statusReason,
         @NotNull(message = "O modelo de trabalho é obrigatório")
         WorkModelEnum workModel,
         @PositiveOrZero(message = "O salário mínimo não pode ser negativo")

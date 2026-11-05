@@ -96,9 +96,33 @@ export class JobPositionListComponent implements OnInit {
     const labels: { [key: string]: string } = {
       'OPEN': 'Aberta',
       'CLOSED': 'Fechada',
-      'PAUSED': 'Pausada'
+      'PAUSED': 'Pausada',
+      'FROZEN': 'Congelada',
+      'DRAFT': 'Rascunho'
     };
     return status ? (labels[status] || status) : '';
+  }
+
+  statusBadgeClass(status?: string): string {
+    switch (status) {
+      case 'OPEN': return 'bg-success text-white';
+      case 'CLOSED': return 'bg-danger text-white';
+      case 'FROZEN': return 'bg-warning text-dark';
+      case 'PAUSED': return 'bg-warning-subtle text-warning-emphasis';
+      case 'DRAFT': return 'bg-secondary text-white';
+      default: return 'bg-secondary text-white';
+    }
+  }
+
+  statusIcon(status?: string): string {
+    switch (status) {
+      case 'OPEN': return 'bi-check-circle-fill';
+      case 'CLOSED': return 'bi-x-circle-fill';
+      case 'FROZEN': return 'bi-snow';
+      case 'PAUSED': return 'bi-pause-circle-fill';
+      case 'DRAFT': return 'bi-pencil-fill';
+      default: return 'bi-circle-fill';
+    }
   }
 
   getEducationLevelLabel(level?: string): string {

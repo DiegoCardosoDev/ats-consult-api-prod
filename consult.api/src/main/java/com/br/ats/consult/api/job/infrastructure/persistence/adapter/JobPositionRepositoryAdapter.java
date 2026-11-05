@@ -62,6 +62,7 @@ public class JobPositionRepositoryAdapter implements JobPositionGateway {
         entity.setTitle(mapped.getTitle());
         entity.setDescription(mapped.getDescription());
         entity.setStatus(mapped.getStatus());
+        entity.setStatusReason(mapped.getStatusReason());
         entity.setWorkModel(mapped.getWorkModel());
         entity.setContractType(mapped.getContractType());
         entity.setEducationLevel(mapped.getEducationLevel());

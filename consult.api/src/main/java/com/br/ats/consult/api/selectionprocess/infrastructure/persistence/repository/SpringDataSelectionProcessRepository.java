@@ -31,4 +31,26 @@ public interface SpringDataSelectionProcessRepository extends JpaRepository<Sele
     Optional<SelectionProcessEntity> findByClientAndJobAndStatus(@Param("clientId") Long clientId,
                                                                  @Param("jobPositionId") Long jobPositionId,
                                                                  @Param("status") SelectionProcessStatusEnum status);
+
+    @EntityGraph(attributePaths = {"client", "jobPosition"})
+    @Query("""
+            SELECT p FROM SelectionProcessEntity p
+            WHERE (:clientId IS NULL OR p.client.id = :clientId)
+              AND (:jobPositionId IS NULL OR p.jobPosition.id = :jobPositionId)
+              AND (:status IS NULL OR p.status = :status)
+            """)
+    Page<SelectionProcessEntity> findForReport(@Param("clientId") Long clientId,
+                                               @Param("jobPositionId") Long jobPositionId,
+                                               @Param("status") SelectionProcessStatusEnum status,
+                                               Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(p) FROM SelectionProcessEntity p
+            WHERE (:clientId IS NULL OR p.client.id = :clientId)
+              AND (:jobPositionId IS NULL OR p.jobPosition.id = :jobPositionId)
+              AND (:status IS NULL OR p.status = :status)
+            """)
+    long countForReport(@Param("clientId") Long clientId,
+                        @Param("jobPositionId") Long jobPositionId,
+                        @Param("status") SelectionProcessStatusEnum status);
 }

@@ -3,10 +3,12 @@ package com.br.ats.consult.api.job.infrastructure.config;
 import com.br.ats.consult.api.applicationform.domain.usecase.ManageApplicationFormUseCase;
 import com.br.ats.consult.api.client.domain.port.out.ClientGateway;
 import com.br.ats.consult.api.job.domain.port.out.JobPositionGateway;
+import com.br.ats.consult.api.job.domain.usecase.ChangeJobPositionStatusUseCase;
 import com.br.ats.consult.api.job.domain.usecase.CreateJobPositionUseCase;
 import com.br.ats.consult.api.job.domain.usecase.DeleteJobPositionUseCase;
 import com.br.ats.consult.api.job.domain.usecase.FindJobPositionUseCase;
 import com.br.ats.consult.api.job.domain.usecase.UpdateJobPositionUseCase;
+import com.br.ats.consult.api.job.domain.usecase.impl.ChangeJobPositionStatusUseCaseImpl;
 import com.br.ats.consult.api.job.domain.usecase.impl.CreateJobPositionUseCaseImpl;
 import com.br.ats.consult.api.job.domain.usecase.impl.DeleteJobPositionUseCaseImpl;
 import com.br.ats.consult.api.job.domain.usecase.impl.FindJobPositionUseCaseImpl;
@@ -42,5 +44,10 @@ public class JobPositionUseCaseConfiguration {
                                                              TechnologyGateway technologyGateway,
                                                              ClientGateway clientGateway) {
         return new UpdateJobPositionUseCaseImpl(jobPositionGateway, technologyGateway, clientGateway);
+    }
+
+    @Bean
+    public ChangeJobPositionStatusUseCase changeJobPositionStatusUseCase(JobPositionGateway jobPositionGateway) {
+        return new ChangeJobPositionStatusUseCaseImpl(jobPositionGateway);
     }
 }

@@ -37,6 +37,17 @@ services:
       APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
       REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
+      RESUME_STORAGE: ${RESUME_STORAGE:-local}
+      RESUME_UPLOAD_DIR: ${RESUME_UPLOAD_DIR:-uploads/resumes}
+      RESUME_S3_BUCKET: ${RESUME_S3_BUCKET:-}
+      RESUME_S3_REGION: ${RESUME_S3_REGION:-auto}
+      RESUME_S3_ENDPOINT: ${RESUME_S3_ENDPOINT:-}
+      RESUME_S3_ACCESS_KEY: ${RESUME_S3_ACCESS_KEY:-}
+      RESUME_S3_SECRET_KEY: ${RESUME_S3_SECRET_KEY:-}
+      RESUME_S3_PATH_PREFIX: ${RESUME_S3_PATH_PREFIX:-resumes}
+      RESUME_S3_FORCE_PATH_STYLE: ${RESUME_S3_FORCE_PATH_STYLE:-false}
+    volumes:
+      - uploads:/app/uploads
 
   caddy:
     image: caddy:2-alpine
@@ -55,5 +66,6 @@ services:
 
 volumes:
   pgdata:
+  uploads:
   caddy_data:
   caddy_config:

@@ -70,6 +70,14 @@ export class KanbanBoardComponent {
       description: 'Aprovação final do cliente'
     },
     {
+      status: 'CONTRATADO',
+      label: 'Contratado',
+      icon: 'bi-patch-check-fill',
+      color: '#047857',
+      softColor: '#d1fae5',
+      description: 'Candidato contratado pelo cliente'
+    },
+    {
       status: 'REPROVADO',
       label: 'Reprovado',
       icon: 'bi-x-circle',

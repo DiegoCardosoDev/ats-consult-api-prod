@@ -2,12 +2,14 @@ package com.br.ats.consult.api.job.infrastructure.adapter.in.web;
 
 import com.br.ats.consult.api.job.domain.exception.JobPositionNotFoundException;
 import com.br.ats.consult.api.job.domain.model.JobPosition;
+import com.br.ats.consult.api.job.domain.usecase.ChangeJobPositionStatusUseCase;
 import com.br.ats.consult.api.job.domain.usecase.CreateJobPositionUseCase;
 import com.br.ats.consult.api.job.domain.usecase.DeleteJobPositionUseCase;
 import com.br.ats.consult.api.job.domain.usecase.FindJobPositionUseCase;
 import com.br.ats.consult.api.job.domain.usecase.UpdateJobPositionUseCase;
 import com.br.ats.consult.api.job.infrastructure.adapter.in.web.dto.JobPositionRequest;
 import com.br.ats.consult.api.job.infrastructure.adapter.in.web.dto.JobPositionResponse;
+import com.br.ats.consult.api.job.infrastructure.adapter.in.web.dto.JobStatusChangeRequest;
 import com.br.ats.consult.api.job.infrastructure.adapter.in.web.dto.UpdateJobPositionRequest;
 import com.br.ats.consult.api.job.infrastructure.adapter.in.web.mapper.JobPositionWebMapper;
 import com.br.ats.consult.api.shared.infrastructure.adapter.in.web.dto.PageResponse;
@@ -28,17 +30,20 @@ public class JobPositionController {
     private final FindJobPositionUseCase findJobPositionUseCase;
     private final UpdateJobPositionUseCase updateJobPositionUseCase;
     private final DeleteJobPositionUseCase deleteJobPositionUseCase;
+    private final ChangeJobPositionStatusUseCase changeJobPositionStatusUseCase;
     private final JobPositionWebMapper webMapper;
 
     public JobPositionController(CreateJobPositionUseCase createJobPositionUseCase,
                                  FindJobPositionUseCase findJobPositionUseCase,
                                  UpdateJobPositionUseCase updateJobPositionUseCase,
                                  DeleteJobPositionUseCase deleteJobPositionUseCase,
+                                 ChangeJobPositionStatusUseCase changeJobPositionStatusUseCase,
                                  JobPositionWebMapper webMapper) {
         this.createJobPositionUseCase = createJobPositionUseCase;
         this.findJobPositionUseCase = findJobPositionUseCase;
         this.updateJobPositionUseCase = updateJobPositionUseCase;
         this.deleteJobPositionUseCase = deleteJobPositionUseCase;
+        this.changeJobPositionStatusUseCase = changeJobPositionStatusUseCase;
         this.webMapper = webMapper;
     }
 
@@ -71,6 +76,14 @@ public class JobPositionController {
             @PathVariable Long id,
             @RequestBody @Valid UpdateJobPositionRequest request) {
         JobPosition updated = updateJobPositionUseCase.execute(id, webMapper.toDomain(request));
+        return ResponseEntity.ok(webMapper.toResponse(updated));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<JobPositionResponse> changeStatus(
+            @PathVariable Long id,
+            @RequestBody @Valid JobStatusChangeRequest request) {
+        JobPosition updated = changeJobPositionStatusUseCase.execute(id, request.status(), request.reason());
         return ResponseEntity.ok(webMapper.toResponse(updated));
     }
 
