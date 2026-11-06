@@ -1,0 +1,43 @@
+package br.com.ats.consult.api.security.service;
+
+import br.com.ats.consult.api.security.dto.RegisterCandidateDTO;
+import br.com.ats.consult.api.security.exception.EmailAlreadyRegisteredException;
+import br.com.ats.consult.api.security.model.Role;
+import br.com.ats.consult.api.security.model.User;
+import br.com.ats.consult.api.security.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Locale;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Transactional
+    public User register(RegisterCandidateDTO request) {
+        String email = normalizeEmail(request.email());
+
+        if (userRepository.existsByEmail(email)) {
+            throw new EmailAlreadyRegisteredException(email);
+        }
+
+        User newUser = User.builder()
+                .name(request.name().trim())
+                .email(email)
+                .password(passwordEncoder.encode(request.password()))
+                .role(Role.USER)
+                .build();
+
+        return userRepository.save(newUser);
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+}

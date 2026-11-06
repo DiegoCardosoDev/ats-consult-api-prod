@@ -1,0 +1,9 @@
+package br.com.ats.consult.api.report.domain.usecase;
+
+import br.com.ats.consult.api.report.domain.model.ProcessReportFilter;
+import br.com.ats.consult.api.report.domain.model.ProcessReportPage;
+import org.springframework.data.domain.Pageable;
+
+public interface GenerateProcessReportUseCase {
+    ProcessReportPage execute(ProcessReportFilter filter, Pageable pageable);
+}

@@ -52,13 +52,14 @@ Principais capacidades:
 ```text
 ats-api-manager/
 ├── consult.api/
-│   ├── src/main/java/com/br/ats/consult/api/
+│   ├── src/main/java/br/com/ats/consult/api/
 │   │   ├── applicationform/          # Formulários de candidatura por vaga
 │   │   │   ├── domain/               # Modelos, enums, portas e casos de uso
 │   │   │   └── infrastructure/       # Controller, DTOs, JPA, configurações
 │   │   ├── candidate/                # Cadastro e busca de candidatos
 │   │   ├── client/                   # Cadastro e busca de clientes
 │   │   ├── job/                      # Vagas, localização, tecnologias e enums
+│   │   ├── report/                   # Relatórios agregados e dashboard do processo
 │   │   ├── security/                 # Login, sessão, cookies, CSRF, rate limit e utilizadores
 │   │   ├── selectionprocess/         # Processos, candidaturas, Kanban e comentários
 │   │   ├── shared/                   # Erros de API, paginação e SPA forward
@@ -70,7 +71,7 @@ ats-api-manager/
 │   │   ├── application-dev.properties
 │   │   ├── application-prod.properties
 │   │   └── db/migration/             # Flyway V1..V17
-│   └── src/test/java/                # Testes de contexto, segurança e integração
+│   └── src/test/java/br/com/ats/consult/api/  # Testes de contexto, segurança e integração
 ├── ats-frontend/
 │   └── src/
 │       ├── app/
@@ -90,6 +91,29 @@ ats-api-manager/
 └── postman/
     └── ats_collection.json
 ```
+
+### 3.1 Convenção de pacotes
+
+O pacote base do backend segue a **Reverse Domain Name Convention**:
+
+```text
+br.com.ats.consult.api
+```
+
+- `br.com.ats` é o domínio invertido da organização.
+- `consult.api` identifica o produto/módulo.
+- A classe `Application.java` (`@SpringBootApplication`) está na raiz do pacote
+  base, pelo que o component scan, o scan de entidades JPA e o scan de
+  repositórios Spring Data cobrem automaticamente todos os módulos
+  (`applicationform`, `candidate`, `client`, `job`, `report`, `security`,
+  `selectionprocess`, `shared`, `technology`).
+- Os testes seguem exatamente a mesma árvore em
+  `consult.api/src/test/java/br/com/ats/consult/api/`.
+- O `groupId` Maven correspondente é `br.com.ats`.
+
+> Importante: a ordem correta é `TLD.domínio.produto` (ex.: `com.empresa`,
+> `br.com.empresa`). O padrão inverso, com o domínio antes do TLD, não deve
+> ser utilizado.
 
 ## 4. Arquitetura do backend
 
@@ -132,6 +156,7 @@ Características:
 | `candidate` | Candidatos, endereço e busca por nome/cargo |
 | `technology` | Catálogo hierárquico de tecnologias |
 | `job` | Vagas, vínculo obrigatório com cliente, localização, salários e tecnologias |
+| `report` | Relatórios agregados e dashboard do processo seletivo |
 | `applicationform` | Formulário de perguntas por vaga e validação de respostas |
 | `selectionprocess` | Processos seletivos, candidaturas, currículos, Kanban e comentários |
 | `security` | Autenticação, autorização, sessão no servidor, cookies, CSRF e rate limiting |

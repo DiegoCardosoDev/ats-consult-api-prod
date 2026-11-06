@@ -278,13 +278,13 @@ Com CSRF habilitado, obtenha primeiro o cookie em `GET /api/v1/auth/csrf` e envi
 
 ## 15. Referências no código
 
-- `consult.api/src/main/java/com/br/ats/consult/api/security/AuthController.java`
-- `consult.api/src/main/java/com/br/ats/consult/api/security/config/SecurityAuthConfig.java`
-- `consult.api/src/main/java/com/br/ats/consult/api/security/service/SessionAuthenticationService.java`
-- `consult.api/src/main/java/com/br/ats/consult/api/security/service/UserDetailsServiceImpl.java`
-- `consult.api/src/main/java/com/br/ats/consult/api/security/model/UserPrincipal.java`
-- `consult.api/src/main/java/com/br/ats/consult/api/security/RateLimitService.java`
-- `consult.api/src/main/java/com/br/ats/consult/api/security/SessionCookieService.java`
+- `consult.api/src/main/java/br/com/ats/consult/api/security/AuthController.java`
+- `consult.api/src/main/java/br/com/ats/consult/api/security/config/SecurityAuthConfig.java`
+- `consult.api/src/main/java/br/com/ats/consult/api/security/service/SessionAuthenticationService.java`
+- `consult.api/src/main/java/br/com/ats/consult/api/security/service/UserDetailsServiceImpl.java`
+- `consult.api/src/main/java/br/com/ats/consult/api/security/model/UserPrincipal.java`
+- `consult.api/src/main/java/br/com/ats/consult/api/security/RateLimitService.java`
+- `consult.api/src/main/java/br/com/ats/consult/api/security/SessionCookieService.java`
 - `ats-frontend/src/app/services/auth.service.ts`
 - `ats-frontend/src/app/pages/login/login.component.ts`
 - `ats-frontend/src/app/core/guards/auth.guard.ts`

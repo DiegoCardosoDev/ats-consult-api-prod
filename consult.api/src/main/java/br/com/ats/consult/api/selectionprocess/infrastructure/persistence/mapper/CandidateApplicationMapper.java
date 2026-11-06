@@ -1,0 +1,51 @@
+package br.com.ats.consult.api.selectionprocess.infrastructure.persistence.mapper;
+
+import br.com.ats.consult.api.applicationform.domain.model.FormAnswer;
+import br.com.ats.consult.api.candidate.infrastructure.persistence.mapper.CandidateMapper;
+import br.com.ats.consult.api.selectionprocess.domain.model.ApplicationComment;
+import br.com.ats.consult.api.selectionprocess.domain.model.CandidateApplication;
+import br.com.ats.consult.api.selectionprocess.domain.model.ResumeMetadata;
+import br.com.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationAnswerEntity;
+import br.com.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationCommentEntity;
+import br.com.ats.consult.api.selectionprocess.infrastructure.persistence.entity.CandidateApplicationEntity;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
+
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {CandidateMapper.class})
+public interface CandidateApplicationMapper {
+
+    @Mapping(target = "selectionProcessId", source = "process.id")
+    @Mapping(target = "resume", source = ".")
+    CandidateApplication toDomain(CandidateApplicationEntity entity);
+
+    default ResumeMetadata mapResume(CandidateApplicationEntity entity) {
+        return new ResumeMetadata(
+                entity.getResumeFilename(),
+                entity.getResumeContentType(),
+                entity.getResumeSizeBytes(),
+                entity.getResumeStorageKey()
+        );
+    }
+
+    default FormAnswer mapAnswer(CandidateApplicationAnswerEntity entity) {
+        return new FormAnswer(
+                entity.getQuestionId(),
+                entity.getQuestionKey(),
+                entity.getQuestionPrompt(),
+                entity.getAnswer(),
+                entity.getPosition()
+        );
+    }
+
+    default ApplicationComment mapComment(CandidateApplicationCommentEntity entity) {
+        return new ApplicationComment(
+                entity.getId(),
+                entity.getApplication() == null ? null : entity.getApplication().getId(),
+                entity.getAuthorId(),
+                entity.getAuthorEmail(),
+                entity.getMessage(),
+                entity.getCreatedAt()
+        );
+    }
+}

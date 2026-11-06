@@ -1,0 +1,33 @@
+package br.com.ats.consult.api.selectionprocess.infrastructure.adapter.in.web.dto;
+
+import br.com.ats.consult.api.selectionprocess.domain.enums.SelectionProcessStatusEnum;
+import br.com.ats.consult.api.selectionprocess.domain.model.CandidateApplication;
+import br.com.ats.consult.api.selectionprocess.domain.model.SelectionProcess;
+
+import java.time.LocalDate;
+import java.util.List;
+
+public record SelectionProcessResponse(
+        Long id,
+        ClientSummaryResponse client,
+        JobPositionSummaryResponse jobPosition,
+        SelectionProcessStatusEnum status,
+        LocalDate openedAt,
+        List<CandidateApplicationResponse> candidates
+) {
+
+    public static SelectionProcessResponse fromDomain(SelectionProcess process,
+                                                      List<CandidateApplication> applications) {
+        return new SelectionProcessResponse(
+                process.getId(),
+                ClientSummaryResponse.fromDomain(process.getClient()),
+                JobPositionSummaryResponse.fromDomain(process.getJobPosition()),
+                process.getStatus(),
+                process.getOpenedAt(),
+                applications == null ? List.of() : applications.stream()
+                        .map(application -> CandidateApplicationResponse.fromDomain(application,
+                                process.getJobPosition()))
+                        .toList()
+        );
+    }
+}

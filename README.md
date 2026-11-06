@@ -52,7 +52,7 @@ Principais capacidades:
 ```text
 ats-api-manager/
 ├── consult.api/
-│   ├── src/main/java/com/br/ats/consult/api/
+│   ├── src/main/java/br/com/ats/consult/api/
 │   │   ├── applicationform/          # Formulários de candidatura por vaga
 │   │   │   ├── domain/               # Modelos, enums, portas e casos de uso
 │   │   │   └── infrastructure/       # Controller, DTOs, JPA, configurações
